@@ -27,6 +27,8 @@ export interface Plan {
   topic: string;
   className: string;
   situationDescription: string;
+  situationImageDataUrl: string;
+  situationImageName: string;
   globalGoal: string;
   date: string;
   startTime: string;

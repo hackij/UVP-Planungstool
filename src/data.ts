@@ -26,6 +26,8 @@ export const initialPlan = (): Plan => ({
   topic: "Lernsituation / Thema der Stunde",
   className: "",
   situationDescription: "",
+  situationImageDataUrl: "",
+  situationImageName: "",
   globalGoal: "Die Lernenden können …",
   date: new Date().toISOString().slice(0, 10),
   startTime: "08:00",
