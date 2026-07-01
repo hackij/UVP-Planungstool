@@ -22,10 +22,34 @@ const addMinutes = (time: string, minutes: number) => {
   return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 };
 
+const normalizePlan = (candidate: unknown): Plan => {
+  const fallback = initialPlan();
+  if (!candidate || typeof candidate !== "object") return fallback;
+  const partial = candidate as Partial<Plan>;
+  if (!Array.isArray(partial.phases) || partial.phases.length === 0) return fallback;
+  return {
+    ...fallback,
+    ...partial,
+    preparation: { ...fallback.preparation, ...(partial.preparation ?? {}) },
+    phases: partial.phases.map((phase, index) => {
+      const template = phaseTemplate(index);
+      return {
+        ...template,
+        ...phase,
+        content: phase.content ?? "",
+        differentiationDetails: {
+          ...template.differentiationDetails,
+          ...(phase.differentiationDetails ?? {}),
+        },
+      };
+    }),
+  };
+};
+
 const readStoredPlan = (): Plan => {
   try {
     const value = localStorage.getItem(STORAGE_KEY);
-    return value ? JSON.parse(value) : initialPlan();
+    return value ? normalizePlan(JSON.parse(value)) : initialPlan();
   } catch { return initialPlan(); }
 };
 
@@ -77,8 +101,9 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const next = JSON.parse(String(reader.result)) as Plan;
-        if (!next.globalGoal || !Array.isArray(next.phases)) throw new Error();
+        const raw = JSON.parse(String(reader.result)) as Partial<Plan>;
+        if (!raw.globalGoal || !Array.isArray(raw.phases)) throw new Error();
+        const next = normalizePlan(raw);
         setPlan(next);
         setSelectedId(next.phases[0]?.id ?? "");
       } catch { window.alert("Die Datei ist keine gültige UVP-Planung."); }
@@ -239,6 +264,7 @@ export default function App() {
                   <label><span className="label">Phasen-Titel</span><input className="field" value={selected.title} onChange={(e) => updatePhase(selected.id, { title: e.target.value })} /></label>
                   <label><span className="label">Zeit in Minuten</span><input className="field" min="1" max="240" type="number" value={selected.minutes} onChange={(e) => updatePhase(selected.id, { minutes: Math.max(0, Number(e.target.value)) })} /></label>
                   <label className="sm:col-span-2"><span className="label">Wir-Lernziel</span><textarea className="field min-h-20" value={selected.goal} onChange={(e) => updatePhase(selected.id, { goal: e.target.value })} /></label>
+                  <label className="sm:col-span-2"><span className="label">Unterrichtsinhalt</span><textarea className="field min-h-24" placeholder="Was wird in dieser Phase fachlich thematisiert?" value={selected.content} onChange={(e) => updatePhase(selected.id, { content: e.target.value })} /></label>
                   <label><span className="label">Methoden & Material</span><textarea className="field min-h-28" placeholder="z. B. Think–Pair–Share, Impulskarte …" value={selected.methods} onChange={(e) => updatePhase(selected.id, { methods: e.target.value })} /></label>
                   <label><span className="label">Moderation</span><textarea className="field min-h-28" placeholder="Leitfragen, Übergänge, Impulse …" value={selected.moderation} onChange={(e) => updatePhase(selected.id, { moderation: e.target.value })} /></label>
                   <div className="sm:col-span-2">
@@ -248,6 +274,53 @@ export default function App() {
                         <button key={value} onClick={() => updatePhase(selected.id, { differentiation: value })} className={`rounded-full px-4 py-2 text-xs font-bold transition ${selected.differentiation === value ? "bg-ink text-white" : "bg-paper text-ink/55 hover:text-ink"}`}>{value}</button>
                       ))}
                     </div>
+                    {selected.differentiation === "Ja" && (
+                      <div className="mt-4 grid gap-3 rounded-2xl border border-ink/10 bg-paper/60 p-4 sm:grid-cols-2">
+                        {([
+                          ["up", "upHow", "Nach oben", "z. B. vertiefender Transferauftrag …"],
+                          ["down", "downHow", "Nach unten", "z. B. Hilfekarte, Satzstarter …"],
+                        ] as const).map(([direction, how, label, placeholder]) => {
+                          const active = selected.differentiationDetails[direction];
+                          return (
+                            <div key={direction} className="rounded-2xl bg-white p-3">
+                              <button
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => updatePhase(selected.id, {
+                                  differentiationDetails: {
+                                    ...selected.differentiationDetails,
+                                    [direction]: !active,
+                                  },
+                                })}
+                                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold transition ${active ? "bg-moss text-white" : "bg-paper text-ink/60 hover:text-ink"}`}
+                              >
+                                <span className={`grid h-5 w-5 place-items-center rounded-md border ${active ? "border-lime bg-lime text-ink" : "border-ink/20"}`}>
+                                  {active && <Check size={13} strokeWidth={3} />}
+                                </span>
+                                {label}
+                              </button>
+                              {active && (
+                                <label className="mt-3 block">
+                                  <span className="label">Wie / wodurch?</span>
+                                  <textarea
+                                    aria-label={`${label}: Wie oder wodurch?`}
+                                    className="field min-h-24"
+                                    placeholder={placeholder}
+                                    value={selected.differentiationDetails[how]}
+                                    onChange={(e) => updatePhase(selected.id, {
+                                      differentiationDetails: {
+                                        ...selected.differentiationDetails,
+                                        [how]: e.target.value,
+                                      },
+                                    })}
+                                  />
+                                </label>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -390,10 +463,20 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                   <div className="text-[7pt] font-bold uppercase opacity-55">Phase {index + 1}</div>
                   <div className="mt-1 font-display text-[10pt] font-bold leading-tight">{phase.title}</div>
                 </div>
-                <div className="grid grid-cols-2 gap-[3mm] p-[3mm] text-[7.5pt] leading-snug">
+                <div className="grid grid-cols-3 gap-[3mm] p-[3mm] text-[7.5pt] leading-snug">
                   <div><b>Wir-Lernziel</b><br />{phase.goal || "—"}</div>
-                  <div><b>Methode / Material</b><br />{phase.methods || "—"}</div>
-                  {index === 0 && <div className="col-span-2 -mt-1 text-[7pt] text-ink/65"><b>Moderation:</b> {phase.moderation || "—"}</div>}
+                  <div><b>Unterrichtsinhalt</b><br />{phase.content || "—"}</div>
+                  <div>
+                    <b>Methode / Material</b><br />{phase.methods || "—"}
+                    {phase.differentiation === "Ja" && (phase.differentiationDetails.up || phase.differentiationDetails.down) && (
+                      <div className="mt-1 text-[6.5pt] text-ink/60">
+                        <b>Differenzierung:</b>
+                        {phase.differentiationDetails.up && ` ↑ ${phase.differentiationDetails.upHow || "nach oben"}`}
+                        {phase.differentiationDetails.down && ` ↓ ${phase.differentiationDetails.downHow || "nach unten"}`}
+                      </div>
+                    )}
+                  </div>
+                  {index === 0 && <div className="col-span-3 -mt-1 text-[7pt] text-ink/65"><b>Moderation:</b> {phase.moderation || "—"}</div>}
                 </div>
                 <div className="flex flex-col items-center justify-center border-l border-ink/10 bg-paper text-center">
                   <strong className="text-[10pt]">{phase.minutes}′</strong>

@@ -12,10 +12,12 @@ const phase = (title: string, minutes: number, color: string, goal = ""): Phase 
   id: crypto.randomUUID(),
   title,
   goal,
+  content: "",
   methods: "",
   minutes,
   moderation: "",
   differentiation: "Nicht vorgesehen",
+  differentiationDetails: { up: false, upHow: "", down: false, downHow: "" },
   competencies: emptyCompetencies(),
   color,
 });
