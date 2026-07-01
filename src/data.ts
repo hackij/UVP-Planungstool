@@ -24,6 +24,8 @@ const phase = (title: string, minutes: number, color: string, goal = ""): Phase 
 
 export const initialPlan = (): Plan => ({
   topic: "Lernsituation / Thema der Stunde",
+  className: "",
+  situationDescription: "",
   globalGoal: "Die Lernenden können …",
   date: new Date().toISOString().slice(0, 10),
   startTime: "08:00",
