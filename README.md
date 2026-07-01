@@ -2,6 +2,12 @@
 
 Responsive React-Web-App zur kompetenzorientierten Unterrichtsplanung für Referendarinnen und Referendare.
 
+## Live-Version
+
+**https://hackij.github.io/UVP-Planungstool/**
+
+Die Website wird bei jedem Push auf `main` automatisch über GitHub Actions gebaut und auf GitHub Pages veröffentlicht.
+
 ## Lokal starten
 
 ```bash
