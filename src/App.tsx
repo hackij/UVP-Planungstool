@@ -415,8 +415,8 @@ export default function App() {
           <section className="mt-8">
             <div className="mb-4 flex items-end justify-between">
               <div>
-                <div className="label">Planungsverlauf</div>
-                <h2 className="font-display text-2xl font-bold sm:text-3xl">Der rote Faden deiner Stunde</h2>
+                <div className="label">Der rote Faden deiner Stunde</div>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsverlaufsplan</h2>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <button
