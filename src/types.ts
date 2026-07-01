@@ -25,6 +25,8 @@ export interface Phase {
 
 export interface Plan {
   topic: string;
+  className: string;
+  situationDescription: string;
   globalGoal: string;
   date: string;
   startTime: string;

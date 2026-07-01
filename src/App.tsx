@@ -16,6 +16,9 @@ const areas: { key: CompetencyArea; label: string; short: string }[] = [
 const dimensions: { key: CompetencyDimension; label: string }[] = [
   { key: "wissen", label: "Wissen" }, { key: "wollen", label: "Wollen" }, { key: "koennen", label: "Können" },
 ];
+const landscapeDimensions: { key: CompetencyDimension; label: string }[] = [
+  { key: "wissen", label: "A: Wissen" }, { key: "koennen", label: "B: Können" }, { key: "wollen", label: "C: Wollen" },
+];
 
 const addMinutes = (time: string, minutes: number) => {
   const [h = 0, m = 0] = time.split(":").map(Number);
@@ -188,11 +191,34 @@ export default function App() {
             <div className="relative grid gap-6 lg:grid-cols-[1fr_280px] lg:items-end">
               <div>
                 <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-lime"><BookOpen size={15} />Unterrichtsentwurf</div>
-                <input
-                  aria-label="Thema der Stunde"
-                  className="mb-5 w-full border-0 border-b border-white/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-white/30 focus:border-lime sm:text-3xl"
-                  value={plan.topic} onChange={(e) => updatePlan("topic", e.target.value)}
-                />
+                <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_210px]">
+                  <label>
+                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Thema / Lernsituation</span>
+                    <input
+                      aria-label="Thema der Stunde"
+                      className="w-full border-0 border-b border-white/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-white/30 focus:border-lime sm:text-3xl"
+                      value={plan.topic} onChange={(e) => updatePlan("topic", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Klasse</span>
+                    <input
+                      aria-label="Klasse"
+                      className="w-full border-0 border-b border-white/15 bg-transparent pb-2 text-lg font-bold outline-none placeholder:text-white/25 focus:border-lime sm:text-xl"
+                      placeholder="z. B. Bäcker 11"
+                      value={plan.className} onChange={(e) => updatePlan("className", e.target.value)}
+                    />
+                  </label>
+                </div>
+                <label className="mb-5 block">
+                  <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</span>
+                  <textarea
+                    aria-label="Situationsbeschreibung"
+                    className="min-h-[104px] w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-relaxed text-white outline-none backdrop-blur placeholder:text-white/25 focus:border-lime"
+                    placeholder="Welche berufliche Handlung bildet den Ausgangspunkt? Beschreibe Betriebssituation, Auftrag, Problem und Handlungsanlass …"
+                    value={plan.situationDescription} onChange={(e) => updatePlan("situationDescription", e.target.value)}
+                  />
+                </label>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Globalziel der Unterrichtseinheit</label>
                 <textarea
                   aria-label="Globalziel"
@@ -354,7 +380,7 @@ export default function App() {
                 </button>
                 {matrixOpen && (
                   <div className="border-t border-ink/10 px-5 pb-6 pt-5 sm:px-7">
-                    <p className="mb-5 text-xs leading-relaxed text-ink/50">Wähle je Kompetenzfeld die angestrebte DQR-Niveaustufe. 0 bedeutet: in dieser Phase nicht fokussiert.</p>
+                    <p className="mb-5 text-xs leading-relaxed text-ink/50">Wähle je Kompetenzfeld das angestrebte Niveau. 0 bedeutet: in dieser Phase nicht fokussiert.</p>
                     <div className="grid grid-cols-[76px_repeat(3,1fr)] gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-ink/45">
                       <span />
                       {dimensions.map((d) => <span key={d.key}>{d.label}</span>)}
@@ -369,7 +395,7 @@ export default function App() {
                               onChange={(e) => updateCompetency(area.key, dimension.key, Number(e.target.value))}
                               className="rounded-xl border border-ink/10 bg-paper px-1 py-2 text-center text-xs font-bold outline-none focus:border-moss"
                             >
-                              {[0, 1, 2, 3, 4].map((level) => <option value={level} key={level}>{level === 0 ? "–" : `DQR ${level}`}</option>)}
+                              {[0, 1, 2, 3, 4].map((level) => <option value={level} key={level}>{level === 0 ? "–" : `Niveau ${level}`}</option>)}
                             </select>
                           ))}
                         </Fragment>
@@ -409,9 +435,9 @@ export default function App() {
           <section className="mb-8 mt-8 overflow-hidden rounded-[2rem] border border-ink/10 bg-white p-5 sm:p-7">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div><div className="label">Gesamtbild</div><h2 className="font-display text-2xl font-bold sm:text-3xl">Handlungskompetenzmatrix</h2></div>
-              <span className="text-xs text-ink/45">nach dem Modell Wissen · Wollen · Können</span>
+              <span className="text-xs text-ink/45">nach dem Modell Wissen · Können · Wollen</span>
             </div>
-            <MatrixVisualization phases={plan.phases} />
+            <CompetencyLandscape phases={plan.phases} />
           </section>
         </main>
       </div>
@@ -500,31 +526,84 @@ function ExamCriteriaModal({
   );
 }
 
-function MatrixVisualization({ phases, compact = false }: { phases: Phase[]; compact?: boolean }) {
+function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; compact?: boolean }) {
+  const visualAreas: { key: CompetencyArea; title: string; subtitle: string }[] = [
+    { key: "fach", title: "I. Sach-/Fachkompetenz", subtitle: "Umgang mit der Sache" },
+    { key: "selbst", title: "II.1 Selbstkompetenz", subtitle: "Umgang mit sich selbst" },
+    { key: "sozial", title: "II.2 Sozialkompetenz", subtitle: "Umgang mit anderen" },
+  ];
+  const frontX = 250;
+  const cellWidth = 135;
+  const depthX = 120;
+  const depthY = 104;
+  const dotOffsets = [[0, 0], [-9, 2], [9, 2], [0, -9], [-9, -8], [9, -8]];
+  const svgHeight = 545 + Math.max(1, Math.ceil(phases.length / 4)) * 20;
+
   return (
-    <div className="overflow-x-auto">
-      <div className={`${compact ? "min-w-[650px]" : "min-w-[760px]"} grid grid-cols-[130px_repeat(9,minmax(58px,1fr))] gap-px overflow-hidden rounded-2xl bg-ink/10`}>
-        <div className="bg-ink p-3 text-xs font-bold text-white">Phase</div>
-        {areas.map((area) => dimensions.map((dimension) => (
-          <div key={`${area.key}-${dimension.key}`} className="bg-ink p-2 text-center text-white">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-white/45">{area.short}</div>
-            <div className="text-[10px] font-semibold">{dimension.label}</div>
-          </div>
-        )))}
-        {phases.map((phase) => (
-          <Fragment key={phase.id}>
-            <div className="flex items-center gap-2 bg-white p-3 text-xs font-bold"><span className="h-3 w-3 shrink-0 rounded-full" style={{ background: phase.color }} />{phase.title}</div>
-            {areas.flatMap((area) => dimensions.map((dimension) => {
-              const value = phase.competencies?.[area.key]?.[dimension.key] ?? 0;
-              return (
-                <div key={`${phase.id}-${area.key}-${dimension.key}`} className="grid min-h-12 place-items-center bg-white">
-                  {value ? <span className="grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-ink" style={{ background: phase.color, opacity: .45 + value * .12 }}>{value}</span> : <span className="h-1.5 w-1.5 rounded-full bg-ink/10" />}
-                </div>
-              );
-            }))}
-          </Fragment>
-        ))}
-      </div>
+    <div className="overflow-x-auto rounded-2xl bg-paper/50 p-2">
+      <svg
+        viewBox={`0 0 900 ${svgHeight}`}
+        className={compact ? "min-w-[650px]" : "min-w-[820px]"}
+        role="img"
+        aria-label="Dreidimensionale Handlungskompetenzmatrix mit Niveaustufen und Phasenpunkten"
+      >
+        {visualAreas.map((area, areaIndex) => {
+          const baseY = 140 + areaIndex * 162;
+          const dots = phases.flatMap((phase, phaseIndex) =>
+            landscapeDimensions.flatMap((dimension, dimensionIndex) => {
+              const level = phase.competencies?.[area.key]?.[dimension.key] ?? 0;
+              return level > 0 ? [{ phase, phaseIndex, dimensionIndex, level }] : [];
+            }),
+          );
+          return (
+            <g key={area.key}>
+              <text x="22" y={baseY - 14} fill="#18231f" opacity=".58" fontSize="13" fontStyle="italic">{area.subtitle}</text>
+              <rect x="20" y={baseY} width="205" height="32" rx="3" fill="#fff" stroke="#18231f" strokeOpacity=".4" />
+              <text x="32" y={baseY + 21} fill="#18231f" fontSize="13" fontWeight="700">{area.title}</text>
+
+              {[0, 1, 2, 3, 4].map((level) => {
+                const t = level / 4;
+                const xShift = depthX * t;
+                const y = baseY - depthY * t;
+                return <line key={`h-${level}`} x1={frontX + xShift} y1={y} x2={frontX + cellWidth * 3 + xShift} y2={y} stroke="#315f4d" strokeOpacity=".42" strokeWidth="1.5" />;
+              })}
+              {[0, 1, 2, 3].map((column) => (
+                <line key={`v-${column}`} x1={frontX + column * cellWidth} y1={baseY} x2={frontX + column * cellWidth + depthX} y2={baseY - depthY} stroke="#315f4d" strokeOpacity=".42" strokeWidth="1.5" />
+              ))}
+              {[0, 1, 2].map((column) => (
+                <g key={`label-${column}`}>
+                  <rect x={frontX + column * cellWidth} y={baseY} width={cellWidth} height="32" fill="#fff" stroke="#315f4d" strokeOpacity=".42" />
+                  <text x={frontX + column * cellWidth + cellWidth / 2} y={baseY + 21} textAnchor="middle" fill="#18231f" fontSize="12" fontWeight="700">{landscapeDimensions[column].label}</text>
+                </g>
+              ))}
+              {[1, 2, 3, 4].map((level) => {
+                const t = (level - .5) / 4;
+                return <text key={`n-${level}`} x={frontX + cellWidth * 3 + depthX * t + 10} y={baseY - depthY * t + 4} fill="#18231f" fontSize="12" fontWeight="700">{level}</text>;
+              })}
+              {dots.map((dot, dotIndex) => {
+                const sameBefore = dots.slice(0, dotIndex).filter((other) => other.dimensionIndex === dot.dimensionIndex && other.level === dot.level).length;
+                const offset = dotOffsets[sameBefore % dotOffsets.length];
+                const t = (dot.level - .5) / 4;
+                const x = frontX + dot.dimensionIndex * cellWidth + cellWidth / 2 + depthX * t + offset[0];
+                const y = baseY - depthY * t + offset[1];
+                return (
+                  <circle key={`${dot.phase.id}-${area.key}-${dot.dimensionIndex}`} cx={x} cy={y} r={compact ? 6 : 7} fill={dot.phase.color} stroke="#fff" strokeWidth="2">
+                    <title>{`${dot.phase.title}: ${area.title}, ${landscapeDimensions[dot.dimensionIndex].label}, Niveau ${dot.level}`}</title>
+                  </circle>
+                );
+              })}
+            </g>
+          );
+        })}
+        <g transform="translate(22 538)">
+          {phases.map((phase, index) => (
+            <g key={phase.id} transform={`translate(${(index % 4) * 210} ${Math.floor(index / 4) * 20})`}>
+              <circle cx="7" cy="0" r="6" fill={phase.color} />
+              <text x="18" y="4" fill="#18231f" fontSize="10" fontWeight="600">{phase.title.length > 15 ? `${phase.title.slice(0, 14)}…` : phase.title}</text>
+            </g>
+          ))}
+        </g>
+      </svg>
     </div>
   );
 }
@@ -537,14 +616,20 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         <div className="mt-6 rounded-[7mm] bg-ink p-[7mm] text-white">
           <div className="text-[8pt] font-bold uppercase tracking-[.16em] text-lime">Thema der Stunde</div>
           <h1 className="mt-2 font-display text-[22pt] font-bold leading-tight">{plan.topic}</h1>
+          {plan.situationDescription && (
+            <div className="mt-4 border-t border-white/15 pt-3">
+              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</div>
+              <p className="mt-1 line-clamp-2 text-[8.5pt] leading-snug text-white/75">{plan.situationDescription}</p>
+            </div>
+          )}
           <div className="mt-5 border-t border-white/15 pt-4">
             <div className="text-[8pt] font-bold uppercase tracking-[.14em] text-white/45">Globalziel</div>
             <p className="mt-1 text-[12pt] leading-snug">{plan.globalGoal}</p>
           </div>
           <div className="mt-5 grid grid-cols-[1fr_auto] items-end gap-5">
             <div className="text-[8pt] text-white/55">
-              <div className="font-bold uppercase tracking-[.13em]">Datum</div>
-              <div className="mt-1 text-[10pt] font-semibold text-white">{plan.date}</div>
+              <div className="font-bold uppercase tracking-[.13em]">Datum · Klasse</div>
+              <div className="mt-1 text-[10pt] font-semibold text-white">{plan.date}{plan.className ? ` · ${plan.className}` : ""}</div>
             </div>
             <div className="min-w-[82mm] rounded-[4mm] bg-lime px-[5mm] py-[3.5mm] text-ink">
               <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-55">Unterrichtszeit</div>
@@ -594,9 +679,9 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         <PrintHeader page="02" title="Handlungskompetenz" />
         <div className="mt-6">
           <h1 className="font-display text-[22pt] font-bold">Kompetenzprofil der Stunde</h1>
-          <p className="mt-2 max-w-[155mm] text-[9pt] leading-relaxed text-ink/60">Die Matrix macht sichtbar, welche Facetten beruflicher Handlungskompetenz in den einzelnen Unterrichtsphasen angebahnt werden. Die Zahlen markieren die gewählte DQR-Niveaustufe 1–4.</p>
+          <p className="mt-2 max-w-[155mm] text-[9pt] leading-relaxed text-ink/60">Die Matrix macht sichtbar, welche Facetten beruflicher Handlungskompetenz in den einzelnen Unterrichtsphasen angebahnt werden. Die Tiefe markiert das gewählte Niveau 1–4, die Farben verweisen auf die Phasen.</p>
         </div>
-        <div className="mt-6"><MatrixVisualization phases={plan.phases} compact /></div>
+        <div className="mt-5"><CompetencyLandscape phases={plan.phases} compact /></div>
         <div className="mt-7 grid grid-cols-3 gap-[4mm]">
           {dimensions.map((dimension, index) => (
             <div key={dimension.key} className="rounded-[4mm] bg-paper p-[5mm]">
@@ -612,7 +697,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         </div>
         <div className="mt-5 rounded-[4mm] border border-ink/10 p-[5mm]">
           <div className="grid grid-cols-4 gap-3 text-[8pt]">
-            <strong>DQR-Niveaus</strong>
+            <strong>Niveaustufen</strong>
             <span><b>1</b> reproduzieren</span><span><b>2</b> anwenden</span><span><b>3</b> transferieren</span>
           </div>
           <div className="mt-2 grid grid-cols-4 gap-3 text-[8pt]"><span /><span><b>4</b> reflektiert gestalten</span><span className="col-span-2 text-ink/45">0 / leer = in dieser Phase nicht fokussiert</span></div>
