@@ -176,7 +176,18 @@ export default function App() {
                 <div className="label">Planungsverlauf</div>
                 <h2 className="font-display text-2xl font-bold sm:text-3xl">Der rote Faden deiner Stunde</h2>
               </div>
-              <button className="icon-btn shrink-0" onClick={addPhase}><Plus size={17} /> <span className="hidden sm:inline">Phase</span></button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  className="icon-btn border-clay/25 text-clay hover:border-clay/50 hover:bg-clay/5 disabled:cursor-not-allowed disabled:border-ink/10 disabled:text-ink/25 disabled:hover:bg-white"
+                  disabled={!selected || plan.phases.length <= 1}
+                  onClick={() => selected && deletePhase(selected.id)}
+                >
+                  <Trash2 size={16} />
+                  <span className="hidden sm:inline">Phase entfernen</span>
+                  <span className="sm:hidden">Entfernen</span>
+                </button>
+                <button className="icon-btn" onClick={addPhase}><Plus size={17} /> <span className="hidden sm:inline">Phase</span></button>
+              </div>
             </div>
             <div className="timeline-scroll overflow-x-auto pb-5 pt-2">
               <div className="relative flex min-w-max items-center gap-3 px-2 py-4">
