@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, Check, ChevronRight, ClipboardCheck, Clock3, Download, FileDown, Grid3X3,
-  Menu, Plus, Printer, RotateCcw, Save, Sparkles, Trash2, Upload, X,
+  LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Sparkles, Trash2, Upload, X,
 } from "lucide-react";
 import { initialPlan, phaseTemplate } from "./data.ts";
 import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
+import { VERB_CATALOG } from "./verbCatalog.ts";
 import type { CompetencyArea, CompetencyDimension, Phase, Plan } from "./types.ts";
 
 const STORAGE_KEY = "uvp-studio-plan-v1";
@@ -64,6 +65,7 @@ export default function App() {
   const [matrixOpen, setMatrixOpen] = useState(true);
   const [mobileNav, setMobileNav] = useState(false);
   const [criteriaOpen, setCriteriaOpen] = useState(false);
+  const [verbCatalogOpen, setVerbCatalogOpen] = useState<CompetencyDimension | null>(null);
   const [saved, setSaved] = useState(true);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -81,8 +83,12 @@ export default function App() {
   }, [plan]);
 
   useEffect(() => {
-    if (!criteriaOpen) return;
-    const handleKey = (event: KeyboardEvent) => event.key === "Escape" && setCriteriaOpen(false);
+    if (!criteriaOpen && !verbCatalogOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setCriteriaOpen(false);
+      setVerbCatalogOpen(null);
+    };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKey);
@@ -90,7 +96,7 @@ export default function App() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
     };
-  }, [criteriaOpen]);
+  }, [criteriaOpen, verbCatalogOpen]);
 
   const updatePlan = <K extends keyof Plan>(key: K, value: Plan[K]) => setPlan((old) => ({ ...old, [key]: value }));
   const updatePhase = (id: string, patch: Partial<Phase>) =>
@@ -381,6 +387,20 @@ export default function App() {
                 {matrixOpen && (
                   <div className="border-t border-ink/10 px-5 pb-6 pt-5 sm:px-7">
                     <p className="mb-5 text-xs leading-relaxed text-ink/50">Wähle je Kompetenzfeld das angestrebte Niveau. 0 bedeutet: in dieser Phase nicht fokussiert.</p>
+                    <div className="mb-5">
+                      <span className="label">Verben-Katalog nach Müller</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {VERB_CATALOG.map((dimension) => (
+                          <button
+                            key={dimension.key}
+                            onClick={() => setVerbCatalogOpen(dimension.key)}
+                            className="rounded-xl border border-ink/10 bg-paper px-2 py-2.5 text-center text-[11px] font-bold transition hover:border-moss hover:bg-moss hover:text-white"
+                          >
+                            {dimension.code} · {dimension.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div className="grid grid-cols-[76px_repeat(3,1fr)] gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-ink/45">
                       <span />
                       {dimensions.map((d) => <span key={d.key}>{d.label}</span>)}
@@ -449,8 +469,107 @@ export default function App() {
           onReset={() => updatePlan("criteriaChecks", {})}
         />
       )}
+      {verbCatalogOpen && (
+        <VerbCatalogModal
+          initialDimension={verbCatalogOpen}
+          onClose={() => setVerbCatalogOpen(null)}
+        />
+      )}
       <PrintDocument plan={plan} totalMinutes={totalMinutes} />
     </>
+  );
+}
+
+function VerbCatalogModal({
+  initialDimension,
+  onClose,
+}: {
+  initialDimension: CompetencyDimension;
+  onClose: () => void;
+}) {
+  const [activeDimension, setActiveDimension] = useState(initialDimension);
+  const [copiedVerb, setCopiedVerb] = useState("");
+  const dimension = VERB_CATALOG.find((entry) => entry.key === activeDimension) ?? VERB_CATALOG[0];
+
+  const copyVerb = async (verb: string) => {
+    try {
+      await navigator.clipboard.writeText(verb);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = verb;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    setCopiedVerb(verb);
+    window.setTimeout(() => setCopiedVerb(""), 1600);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-ink/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="verb-catalog-title" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-paper shadow-2xl">
+        <div className="border-b border-ink/10 bg-white px-5 py-5 sm:px-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-ink text-lime"><LibraryBig size={21} /></div>
+              <div>
+                <div className="label !mb-1">Lernziele formulieren</div>
+                <h2 id="verb-catalog-title" className="font-display text-2xl font-bold sm:text-3xl">Verben-Katalog</h2>
+              </div>
+            </div>
+            <button aria-label="Verben-Katalog schließen" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-ink/10 hover:bg-paper" onClick={onClose}><X size={19} /></button>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            {VERB_CATALOG.map((entry) => (
+              <button
+                key={entry.key}
+                onClick={() => { setActiveDimension(entry.key); setCopiedVerb(""); }}
+                className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${entry.key === activeDimension ? "bg-ink text-white" : "bg-paper text-ink/55 hover:text-ink"}`}
+              >
+                {entry.code} · {entry.title}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-ink/50">{dimension.subtitle}. Klicke ein Verb an, um es zu kopieren.</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            {dimension.levels.map((level) => (
+              <section key={level.code} className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+                <div className="flex items-start gap-3 bg-ink px-4 py-3 text-white">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-lime text-xs font-bold text-ink">{level.level}</span>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-white/45">{level.code}</div>
+                    <h3 className="text-sm font-bold">{level.title}</h3>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {level.verbs.map((verb) => (
+                      <button
+                        key={verb}
+                        onClick={() => copyVerb(verb)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${copiedVerb === verb ? "border-moss bg-moss text-white" : "border-ink/10 bg-paper text-ink/70 hover:border-moss hover:text-moss"}`}
+                      >
+                        {copiedVerb === verb ? "Kopiert ✓" : verb}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-4 border-t border-ink/10 pt-3 text-xs leading-relaxed text-ink/45">{level.hint}</p>
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-ink/10 bg-white px-5 py-4 sm:px-7">
+          <span className="text-[10px] font-semibold text-ink/35">Handlungsdimensionen und Kompetenzstufen nach Müller</span>
+          <button className="rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white hover:bg-moss" onClick={onClose}>Katalog schließen</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
