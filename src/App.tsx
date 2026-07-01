@@ -366,7 +366,19 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             <div className="text-[8pt] font-bold uppercase tracking-[.14em] text-white/45">Globalziel</div>
             <p className="mt-1 text-[12pt] leading-snug">{plan.globalGoal}</p>
           </div>
-          <div className="mt-4 flex gap-5 text-[9pt] text-white/70"><span>{plan.date}</span><span>{plan.startTime}–{addMinutes(plan.startTime, totalMinutes)} Uhr</span><strong className="text-lime">{totalMinutes} Minuten</strong></div>
+          <div className="mt-5 grid grid-cols-[1fr_auto] items-end gap-5">
+            <div className="text-[8pt] text-white/55">
+              <div className="font-bold uppercase tracking-[.13em]">Datum</div>
+              <div className="mt-1 text-[10pt] font-semibold text-white">{plan.date}</div>
+            </div>
+            <div className="min-w-[82mm] rounded-[4mm] bg-lime px-[5mm] py-[3.5mm] text-ink">
+              <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-55">Unterrichtszeit</div>
+              <div className="mt-1 font-display text-[17pt] font-bold leading-none">
+                {plan.startTime}–{addMinutes(plan.startTime, totalMinutes)} Uhr
+              </div>
+              <div className="mt-1.5 text-[9pt] font-bold">{totalMinutes} Minuten Gesamtdauer</div>
+            </div>
+          </div>
         </div>
         <h2 className="mb-3 mt-6 font-display text-[16pt] font-bold">Zeitstrahl</h2>
         <div className="space-y-[2.5mm]">
