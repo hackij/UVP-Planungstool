@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, Check, ChevronRight, ClipboardCheck, Clock3, Download, FileDown, Grid3X3,
-  LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Sparkles, Trash2, Upload, X,
+  ImagePlus, LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Sparkles, Trash2, Upload, X,
 } from "lucide-react";
 import { initialPlan, phaseTemplate } from "./data.ts";
 import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
@@ -26,6 +26,45 @@ const addMinutes = (time: string, minutes: number) => {
   const total = h * 60 + m + minutes;
   return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 };
+
+const prepareSituationImage = (file: File) => new Promise<string>((resolve, reject) => {
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    reject(new Error("Bitte verwende ein JPEG-, PNG- oder WebP-Bild."));
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    reject(new Error("Das Bild darf höchstens 10 MB groß sein."));
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("Das Bild konnte nicht gelesen werden."));
+  reader.onload = () => {
+    const image = new Image();
+    image.onerror = () => reject(new Error("Das Bild konnte nicht verarbeitet werden."));
+    image.onload = () => {
+      const maxEdge = 1200;
+      const scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        reject(new Error("Das Bild konnte nicht verarbeitet werden."));
+        return;
+      }
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    image.src = String(reader.result);
+  };
+  reader.readAsDataURL(file);
+});
 
 const normalizePlan = (candidate: unknown): Plan => {
   const fallback = initialPlan();
@@ -67,7 +106,10 @@ export default function App() {
   const [criteriaOpen, setCriteriaOpen] = useState(false);
   const [verbCatalogOpen, setVerbCatalogOpen] = useState<CompetencyDimension | null>(null);
   const [saved, setSaved] = useState(true);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageError, setImageError] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
+  const situationImageRef = useRef<HTMLInputElement>(null);
 
   const totalMinutes = useMemo(() => plan.phases.reduce((sum, p) => sum + Number(p.minutes || 0), 0), [plan.phases]);
   const checkedCriteria = useMemo(() => Object.values(plan.criteriaChecks).filter(Boolean).length, [plan.criteriaChecks]);
@@ -134,6 +176,30 @@ export default function App() {
       } catch { window.alert("Die Datei ist keine gültige UVP-Planung."); }
     };
     reader.readAsText(file);
+  };
+
+  const uploadSituationImage = async (file?: File) => {
+    if (!file) return;
+    setImageBusy(true);
+    setImageError("");
+    try {
+      const dataUrl = await prepareSituationImage(file);
+      setPlan((old) => ({
+        ...old,
+        situationImageDataUrl: dataUrl,
+        situationImageName: file.name,
+      }));
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Das Bild konnte nicht verarbeitet werden.");
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const removeSituationImage = () => {
+    setPlan((old) => ({ ...old, situationImageDataUrl: "", situationImageName: "" }));
+    setImageError("");
+    if (situationImageRef.current) situationImageRef.current.value = "";
   };
 
   const addPhase = () => {
@@ -216,15 +282,70 @@ export default function App() {
                     />
                   </label>
                 </div>
-                <label className="mb-5 block">
-                  <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</span>
-                  <textarea
-                    aria-label="Situationsbeschreibung"
-                    className="min-h-[104px] w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-relaxed text-white outline-none backdrop-blur placeholder:text-white/25 focus:border-lime"
-                    placeholder="Welche berufliche Handlung bildet den Ausgangspunkt? Beschreibe Betriebssituation, Auftrag, Problem und Handlungsanlass …"
-                    value={plan.situationDescription} onChange={(e) => updatePlan("situationDescription", e.target.value)}
-                  />
-                </label>
+                <div className="mb-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+                  <label className="block">
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</span>
+                    <textarea
+                      aria-label="Situationsbeschreibung"
+                      className="min-h-[132px] w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-relaxed text-white outline-none backdrop-blur placeholder:text-white/25 focus:border-lime"
+                      placeholder="Welche berufliche Handlung bildet den Ausgangspunkt? Beschreibe Betriebssituation, Auftrag, Problem und Handlungsanlass …"
+                      value={plan.situationDescription} onChange={(e) => updatePlan("situationDescription", e.target.value)}
+                    />
+                  </label>
+                  <div>
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Bild der Einstiegssituation</span>
+                    <input
+                      ref={situationImageRef}
+                      className="hidden"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      aria-label="Bild der Einstiegssituation auswählen"
+                      onChange={(event) => uploadSituationImage(event.target.files?.[0])}
+                    />
+                    {plan.situationImageDataUrl ? (
+                      <div className="group relative h-[132px] overflow-hidden rounded-2xl border border-white/15 bg-white/10">
+                        <img
+                          src={plan.situationImageDataUrl}
+                          alt={plan.situationImageName || "Einstiegssituation"}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-ink/90 to-transparent px-3 pb-3 pt-8">
+                          <span className="min-w-0 truncate text-[10px] font-semibold text-white/80">{plan.situationImageName || "Einstiegsbild"}</span>
+                          <span className="flex shrink-0 gap-1.5">
+                            <button
+                              type="button"
+                              aria-label="Bild der Einstiegssituation ersetzen"
+                              className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink transition hover:bg-white"
+                              onClick={() => situationImageRef.current?.click()}
+                            >
+                              <ImagePlus size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Bild der Einstiegssituation entfernen"
+                              className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-clay transition hover:bg-white"
+                              onClick={removeSituationImage}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="flex h-[132px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-white/25 bg-white/5 px-4 text-center transition hover:border-lime hover:bg-white/10"
+                        onClick={() => situationImageRef.current?.click()}
+                        disabled={imageBusy}
+                      >
+                        <span className="mb-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-lime"><ImagePlus size={19} /></span>
+                        <span className="text-xs font-bold">{imageBusy ? "Bild wird vorbereitet …" : "Bild hochladen"}</span>
+                        <span className="mt-1 text-[10px] leading-snug text-white/40">JPEG, PNG oder WebP · max. 10 MB</span>
+                      </button>
+                    )}
+                    {imageError && <p className="mt-2 text-[10px] font-semibold leading-snug text-clay">{imageError}</p>}
+                  </div>
+                </div>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Globalziel der Unterrichtseinheit</label>
                 <textarea
                   aria-label="Globalziel"
@@ -735,10 +856,19 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         <div className="mt-6 rounded-[7mm] bg-ink p-[7mm] text-white">
           <div className="text-[8pt] font-bold uppercase tracking-[.16em] text-lime">Thema der Stunde</div>
           <h1 className="mt-2 font-display text-[22pt] font-bold leading-tight">{plan.topic}</h1>
-          {plan.situationDescription && (
-            <div className="mt-4 border-t border-white/15 pt-3">
-              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</div>
-              <p className="mt-1 line-clamp-2 text-[8.5pt] leading-snug text-white/75">{plan.situationDescription}</p>
+          {(plan.situationDescription || plan.situationImageDataUrl) && (
+            <div className={`mt-4 gap-[5mm] border-t border-white/15 pt-3 ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_40mm]" : ""}`}>
+              <div>
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</div>
+                <p className="mt-1 line-clamp-4 text-[8.5pt] leading-snug text-white/75">{plan.situationDescription || "Einstiegssituation zur beruflichen Handlung"}</p>
+              </div>
+              {plan.situationImageDataUrl && (
+                <img
+                  src={plan.situationImageDataUrl}
+                  alt={plan.situationImageName || "Einstiegssituation"}
+                  className="h-[26mm] w-[40mm] rounded-[3mm] object-cover"
+                />
+              )}
             </div>
           )}
           <div className="mt-5 border-t border-white/15 pt-4">
