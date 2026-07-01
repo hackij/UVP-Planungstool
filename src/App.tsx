@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, Check, ChevronRight, ClipboardCheck, Clock3, Download, FileDown, Grid3X3,
-  ImagePlus, LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Sparkles, Trash2, Upload, X,
+  ImagePlus, LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Trash2, Upload, X,
 } from "lucide-react";
 import { initialPlan, phaseTemplate } from "./data.ts";
 import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
@@ -9,6 +9,8 @@ import { VERB_CATALOG } from "./verbCatalog.ts";
 import type { CompetencyArea, CompetencyDimension, Phase, Plan } from "./types.ts";
 
 const STORAGE_KEY = "uvp-studio-plan-v1";
+const SCHOOL_LOGO = "./bs1-spengler-logo-weiss.png";
+const LEGACY_PHASE_COLORS = new Set(["#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb"]);
 const areas: { key: CompetencyArea; label: string; short: string }[] = [
   { key: "fach", label: "Fachkompetenz", short: "Fach" },
   { key: "selbst", label: "Selbstkompetenz", short: "Selbst" },
@@ -81,6 +83,7 @@ const normalizePlan = (candidate: unknown): Plan => {
       return {
         ...template,
         ...phase,
+        color: LEGACY_PHASE_COLORS.has(phase.color) ? template.color : phase.color,
         content: phase.content ?? "",
         differentiationDetails: {
           ...template.differentiationDetails,
@@ -218,31 +221,31 @@ export default function App() {
 
   return (
     <>
-      <div className="app-shell min-h-screen bg-paper">
-        <header className="sticky top-0 z-40 border-b border-ink/10 bg-paper/90 backdrop-blur-xl">
-          <div className="mx-auto flex h-[72px] max-w-[1540px] items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-ink text-lime"><Sparkles size={19} /></div>
-              <div>
-                <div className="font-display text-xl font-bold leading-none">UVP Studio</div>
-                <div className="mt-1 text-[10px] font-bold uppercase tracking-[.18em] text-ink/45">Vom Ziel zur Stunde</div>
+      <div className="app-shell flex min-h-screen flex-col bg-paper">
+        <header className="sticky top-0 z-40 border-b-2 border-clay bg-ink text-white shadow-lg shadow-ink/10">
+          <div className="mx-auto flex h-[86px] max-w-[1540px] items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+              <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth und Technikerschule" className="h-11 w-auto shrink-0 object-contain sm:h-14" />
+              <div className="min-w-0 border-l border-white/20 pl-3 sm:pl-5">
+                <div className="font-display truncate text-lg font-bold uppercase leading-none text-white sm:text-2xl">Seminar Metalltechnik</div>
+                <div className="mt-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-sky sm:text-[10px]">UVP Studio · Vom Ziel zur Stunde</div>
               </div>
             </div>
             <div className="hidden items-center gap-2 md:flex">
-              <span className="mr-2 inline-flex items-center gap-1.5 text-xs font-medium text-ink/50">
+              <span className="mr-2 inline-flex items-center gap-1.5 text-xs font-medium text-white/55">
                 {saved ? <Check size={14} /> : <Save size={14} className="animate-pulse" />}
                 {saved ? "Lokal gespeichert" : "Speichert …"}
               </span>
-              <button className="icon-btn" onClick={() => setCriteriaOpen(true)}>
+              <button className="icon-btn border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15" onClick={() => setCriteriaOpen(true)}>
                 <ClipboardCheck size={16} />
                 Kriterien
-                {checkedCriteria > 0 && <span className="rounded-full bg-lime px-2 py-0.5 text-[10px] text-ink">{checkedCriteria}/{EXAM_CRITERIA_COUNT}</span>}
+                {checkedCriteria > 0 && <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-ink">{checkedCriteria}/{EXAM_CRITERIA_COUNT}</span>}
               </button>
-              <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Import</button>
-              <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON</button>
-              <button className="icon-btn border-ink bg-ink text-white hover:bg-moss" onClick={() => window.print()}><FileDown size={16} />PDF exportieren</button>
+              <button className="icon-btn border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15" onClick={() => importRef.current?.click()}><Upload size={16} />Import</button>
+              <button className="icon-btn border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15" onClick={exportJson}><Download size={16} />JSON</button>
+              <button className="icon-btn border-clay bg-clay text-white hover:border-clay hover:bg-[#8d1920]" onClick={() => window.print()}><FileDown size={16} />PDF exportieren</button>
             </div>
-            <button aria-label="Menü öffnen" className="grid h-10 w-10 place-items-center rounded-full border border-ink/10 md:hidden" onClick={() => setMobileNav(!mobileNav)}>
+            <button aria-label="Menü öffnen" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 md:hidden" onClick={() => setMobileNav(!mobileNav)}>
               {mobileNav ? <X /> : <Menu />}
             </button>
           </div>
@@ -251,18 +254,19 @@ export default function App() {
               <button className="icon-btn" onClick={() => { setCriteriaOpen(true); setMobileNav(false); }}><ClipboardCheck size={16} />Prüfungskriterien</button>
               <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Plan importieren</button>
               <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON exportieren</button>
-              <button className="icon-btn bg-ink text-white" onClick={() => window.print()}><Printer size={16} />Als PDF drucken</button>
+              <button className="icon-btn bg-clay text-white" onClick={() => window.print()}><Printer size={16} />Als PDF drucken</button>
             </div>
           )}
           <input ref={importRef} className="hidden" type="file" accept=".json,application/json" onChange={(e) => importJson(e.target.files?.[0])} />
         </header>
 
-        <main className="mx-auto max-w-[1540px] px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-          <section className="relative overflow-hidden rounded-[2rem] bg-ink px-5 py-7 text-white sm:px-8 lg:px-10 lg:py-9">
-            <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-lime/10" />
+        <main className="mx-auto w-full max-w-[1540px] flex-1 px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
+          <section className="relative overflow-hidden rounded-[2rem] bg-ink px-5 py-7 text-white shadow-xl shadow-ink/10 sm:px-8 lg:px-10 lg:py-9">
+            <div className="absolute inset-x-0 top-0 h-1 bg-clay" />
+            <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-sky/10" />
             <div className="relative grid gap-6 lg:grid-cols-[1fr_280px] lg:items-end">
               <div>
-                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-lime"><BookOpen size={15} />Unterrichtsentwurf</div>
+                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-sky"><BookOpen size={15} />Unterrichtsentwurf</div>
                 <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_210px]">
                   <label>
                     <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Thema / Lernsituation</span>
@@ -338,7 +342,7 @@ export default function App() {
                         onClick={() => situationImageRef.current?.click()}
                         disabled={imageBusy}
                       >
-                        <span className="mb-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-lime"><ImagePlus size={19} /></span>
+                        <span className="mb-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-sky"><ImagePlus size={19} /></span>
                         <span className="text-xs font-bold">{imageBusy ? "Bild wird vorbereitet …" : "Bild hochladen"}</span>
                         <span className="mt-1 text-[10px] leading-snug text-white/40">JPEG, PNG oder WebP · max. 10 MB</span>
                       </button>
@@ -362,7 +366,7 @@ export default function App() {
                   <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/45">Beginn</span>
                   <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none [color-scheme:dark]" value={plan.startTime} onChange={(e) => updatePlan("startTime", e.target.value)} />
                 </label>
-                <div className="col-span-2 flex items-center justify-between rounded-2xl bg-lime px-4 py-3 text-ink">
+                <div className="col-span-2 flex items-center justify-between rounded-2xl bg-clay px-4 py-3 text-white">
                   <span className="text-xs font-bold uppercase tracking-wider">Gesamt</span>
                   <span className="font-display text-xl font-bold">{totalMinutes} Min · bis {addMinutes(plan.startTime, totalMinutes)}</span>
                 </div>
@@ -581,6 +585,12 @@ export default function App() {
             <CompetencyLandscape phases={plan.phases} />
           </section>
         </main>
+        <footer className="border-t-2 border-clay bg-ink px-4 py-6 text-white sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-[1540px] flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-display text-sm font-bold uppercase tracking-wide text-sky">Seminar Metalltechnik · UVP Studio</span>
+            <span className="text-white/60">entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
+          </div>
+        </footer>
       </div>
       {criteriaOpen && (
         <ExamCriteriaModal
@@ -743,7 +753,7 @@ function ExamCriteriaModal({
                       <label key={item.id} className={`flex cursor-pointer items-start gap-3 p-4 text-left transition hover:bg-paper/70 ${checked[item.id] ? "bg-lime/10" : ""}`}>
                         <input
                           type="checkbox"
-                          className="mt-0.5 h-5 w-5 shrink-0 accent-[#315f4d]"
+                          className="mt-0.5 h-5 w-5 shrink-0 accent-[#174a87]"
                           checked={Boolean(checked[item.id])}
                           onChange={() => onToggle(item.id)}
                         />
@@ -797,28 +807,28 @@ function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; com
           );
           return (
             <g key={area.key}>
-              <text x="22" y={baseY - 14} fill="#18231f" opacity=".58" fontSize="13" fontStyle="italic">{area.subtitle}</text>
-              <rect x="20" y={baseY} width="205" height="32" rx="3" fill="#fff" stroke="#18231f" strokeOpacity=".4" />
-              <text x="32" y={baseY + 21} fill="#18231f" fontSize="13" fontWeight="700">{area.title}</text>
+              <text x="22" y={baseY - 14} fill="#0c2340" opacity=".58" fontSize="13" fontStyle="italic">{area.subtitle}</text>
+              <rect x="20" y={baseY} width="205" height="32" rx="3" fill="#fff" stroke="#0c2340" strokeOpacity=".4" />
+              <text x="32" y={baseY + 21} fill="#0c2340" fontSize="13" fontWeight="700">{area.title}</text>
 
               {[0, 1, 2, 3, 4].map((level) => {
                 const t = level / 4;
                 const xShift = depthX * t;
                 const y = baseY - depthY * t;
-                return <line key={`h-${level}`} x1={frontX + xShift} y1={y} x2={frontX + cellWidth * 3 + xShift} y2={y} stroke="#315f4d" strokeOpacity=".42" strokeWidth="1.5" />;
+                return <line key={`h-${level}`} x1={frontX + xShift} y1={y} x2={frontX + cellWidth * 3 + xShift} y2={y} stroke="#174a87" strokeOpacity=".42" strokeWidth="1.5" />;
               })}
               {[0, 1, 2, 3].map((column) => (
-                <line key={`v-${column}`} x1={frontX + column * cellWidth} y1={baseY} x2={frontX + column * cellWidth + depthX} y2={baseY - depthY} stroke="#315f4d" strokeOpacity=".42" strokeWidth="1.5" />
+                <line key={`v-${column}`} x1={frontX + column * cellWidth} y1={baseY} x2={frontX + column * cellWidth + depthX} y2={baseY - depthY} stroke="#174a87" strokeOpacity=".42" strokeWidth="1.5" />
               ))}
               {[0, 1, 2].map((column) => (
                 <g key={`label-${column}`}>
-                  <rect x={frontX + column * cellWidth} y={baseY} width={cellWidth} height="32" fill="#fff" stroke="#315f4d" strokeOpacity=".42" />
-                  <text x={frontX + column * cellWidth + cellWidth / 2} y={baseY + 21} textAnchor="middle" fill="#18231f" fontSize="12" fontWeight="700">{landscapeDimensions[column].label}</text>
+                  <rect x={frontX + column * cellWidth} y={baseY} width={cellWidth} height="32" fill="#fff" stroke="#174a87" strokeOpacity=".42" />
+                  <text x={frontX + column * cellWidth + cellWidth / 2} y={baseY + 21} textAnchor="middle" fill="#0c2340" fontSize="12" fontWeight="700">{landscapeDimensions[column].label}</text>
                 </g>
               ))}
               {[1, 2, 3, 4].map((level) => {
                 const t = (level - .5) / 4;
-                return <text key={`n-${level}`} x={frontX + cellWidth * 3 + depthX * t + 10} y={baseY - depthY * t + 4} fill="#18231f" fontSize="12" fontWeight="700">{level}</text>;
+                return <text key={`n-${level}`} x={frontX + cellWidth * 3 + depthX * t + 10} y={baseY - depthY * t + 4} fill="#0c2340" fontSize="12" fontWeight="700">{level}</text>;
               })}
               {dots.map((dot, dotIndex) => {
                 const sameBefore = dots.slice(0, dotIndex).filter((other) => other.dimensionIndex === dot.dimensionIndex && other.level === dot.level).length;
@@ -839,7 +849,7 @@ function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; com
           {phases.map((phase, index) => (
             <g key={phase.id} transform={`translate(${(index % 4) * 210} ${Math.floor(index / 4) * 20})`}>
               <circle cx="7" cy="0" r="6" fill={phase.color} />
-              <text x="18" y="4" fill="#18231f" fontSize="10" fontWeight="600">{phase.title.length > 15 ? `${phase.title.slice(0, 14)}…` : phase.title}</text>
+              <text x="18" y="4" fill="#0c2340" fontSize="10" fontWeight="600">{phase.title.length > 15 ? `${phase.title.slice(0, 14)}…` : phase.title}</text>
             </g>
           ))}
         </g>
@@ -854,7 +864,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
       <section className="print-page">
         <PrintHeader page="01" title="Unterrichtsverlauf" />
         <div className="mt-6 rounded-[7mm] bg-ink p-[7mm] text-white">
-          <div className="text-[8pt] font-bold uppercase tracking-[.16em] text-lime">Thema der Stunde</div>
+          <div className="text-[8pt] font-bold uppercase tracking-[.16em] text-sky">Thema der Stunde</div>
           <h1 className="mt-2 font-display text-[22pt] font-bold leading-tight">{plan.topic}</h1>
           {(plan.situationDescription || plan.situationImageDataUrl) && (
             <div className={`mt-4 gap-[5mm] border-t border-white/15 pt-3 ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_40mm]" : ""}`}>
@@ -880,8 +890,8 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
               <div className="font-bold uppercase tracking-[.13em]">Datum · Klasse</div>
               <div className="mt-1 text-[10pt] font-semibold text-white">{plan.date}{plan.className ? ` · ${plan.className}` : ""}</div>
             </div>
-            <div className="min-w-[82mm] rounded-[4mm] bg-lime px-[5mm] py-[3.5mm] text-ink">
-              <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-55">Unterrichtszeit</div>
+            <div className="min-w-[82mm] rounded-[4mm] bg-clay px-[5mm] py-[3.5mm] text-white">
+              <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-65">Unterrichtszeit</div>
               <div className="mt-1 font-display text-[17pt] font-bold leading-none">
                 {plan.startTime}–{addMinutes(plan.startTime, totalMinutes)} Uhr
               </div>
@@ -934,7 +944,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         <div className="mt-7 grid grid-cols-3 gap-[4mm]">
           {dimensions.map((dimension, index) => (
             <div key={dimension.key} className="rounded-[4mm] bg-paper p-[5mm]">
-              <span className="grid h-[8mm] w-[8mm] place-items-center rounded-full bg-ink text-[9pt] font-bold text-lime">0{index + 1}</span>
+              <span className="grid h-[8mm] w-[8mm] place-items-center rounded-full bg-ink text-[9pt] font-bold text-sky">0{index + 1}</span>
               <h3 className="mt-3 font-display text-[14pt] font-bold">{dimension.label}</h3>
               <p className="mt-2 text-[8pt] leading-relaxed text-ink/60">
                 {dimension.key === "wissen" && "Kenntnisse verstehen, einordnen und als Grundlage für begründetes Handeln nutzen."}
@@ -958,8 +968,24 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
 }
 
 function PrintHeader({ page, title }: { page: string; title: string }) {
-  return <div className="flex items-center justify-between border-b border-ink/15 pb-3"><div className="font-display text-[14pt] font-bold">UVP Studio</div><div className="text-[8pt] font-bold uppercase tracking-[.16em] text-ink/45">{title} · {page}</div></div>;
+  return (
+    <div className="flex items-center justify-between rounded-[4mm] border-b-2 border-clay bg-ink px-[4mm] py-[2.5mm] text-white">
+      <div className="flex items-center gap-[4mm]">
+        <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth" className="h-[9mm] w-auto object-contain" />
+        <div>
+          <div className="font-display text-[12pt] font-bold uppercase leading-none">Seminar Metalltechnik</div>
+          <div className="mt-1 text-[6pt] font-bold uppercase tracking-[.18em] text-sky">UVP Studio</div>
+        </div>
+      </div>
+      <div className="text-[7pt] font-bold uppercase tracking-[.16em] text-white/60">{title} · {page}</div>
+    </div>
+  );
 }
 function PrintFooter() {
-  return <div className="absolute bottom-[8mm] left-[14mm] right-[14mm] flex justify-between border-t border-ink/10 pt-2 text-[6.5pt] text-ink/35"><span>UVP Studio · Unterrichtsplanung</span><span>Lokal erstellt</span></div>;
+  return (
+    <div className="absolute bottom-[8mm] left-[14mm] right-[14mm] flex justify-between gap-5 border-t border-clay/40 pt-2 text-[6.2pt] text-ink/40">
+      <span className="font-bold text-moss">Seminar Metalltechnik · UVP Studio</span>
+      <span>entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
+    </div>
+  );
 }

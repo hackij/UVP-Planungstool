@@ -1,6 +1,6 @@
 import type { Competencies, Phase, Plan } from "./types.ts";
 
-export const PHASE_COLORS = ["#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb"];
+export const PHASE_COLORS = ["#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268"];
 
 export const emptyCompetencies = (): Competencies => ({
   fach: { wissen: 0, wollen: 0, koennen: 0 },

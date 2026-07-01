@@ -2,29 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color: #18231f; background: #f5f3ee; font-synthesis: none; }
+:root { color: #0c2340; background: #f4f6f8; font-synthesis: none; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+h1, h2, h3, .font-display {
+  font-family: "Helvetica Neue Condensed", "HelveticaNeue-CondensedBold", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-stretch: condensed;
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
 button, input, textarea, select { font: inherit; }
 textarea { resize: vertical; }
-::selection { background: #d9f45f; color: #18231f; }
+::selection { background: #d8e7f7; color: #0c2340; }
 
 @layer components {
   .card { @apply rounded-[1.75rem] border border-ink/10 bg-white shadow-soft; }
-  .label { @apply mb-2 block text-[11px] font-bold uppercase tracking-[0.13em] text-ink/55; }
+  .label { @apply mb-2 block text-[11px] font-bold uppercase tracking-[0.13em] text-moss; }
   .field { @apply w-full rounded-xl border border-ink/10 bg-paper/70 px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-moss focus:ring-2 focus:ring-moss/10; }
   .icon-btn { @apply inline-flex h-10 items-center justify-center gap-2 rounded-full border border-ink/10 bg-white px-4 text-sm font-semibold transition hover:border-ink/25 hover:bg-paper; }
 }
 
-.timeline-scroll { scrollbar-color: rgba(49,95,77,.35) transparent; scrollbar-width: thin; }
+.timeline-scroll { scrollbar-color: rgba(23,74,135,.38) transparent; scrollbar-width: thin; }
 
 @page { size: A4 portrait; margin: 0; }
 .print-only { display: none; }
 
 @media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   body { background: white !important; }
   .app-shell { display: none !important; }
-  .print-only { display: block !important; color: #18231f; }
+  .print-only { display: block !important; color: #0c2340; }
   .print-page {
     position: relative;
     width: 210mm;
