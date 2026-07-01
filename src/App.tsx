@@ -404,9 +404,12 @@ export default function App() {
                   <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/45">Beginn</span>
                   <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none [color-scheme:dark]" value={plan.startTime} onChange={(e) => updatePlan("startTime", e.target.value)} />
                 </label>
-                <div className="col-span-2 flex items-center justify-between rounded-2xl bg-clay px-4 py-3 text-white">
-                  <span className="text-xs font-bold uppercase tracking-wider">Gesamt</span>
-                  <span className="font-display text-xl font-bold">{totalMinutes} Min · bis {addMinutes(plan.startTime, totalMinutes)}</span>
+                <div className="col-span-2 flex items-center justify-between gap-3 rounded-2xl bg-clay px-4 py-3 text-white">
+                  <span>
+                    <span className="block text-xs font-bold uppercase tracking-wider">Kalkulierte Unterrichtszeit</span>
+                    <span className="mt-0.5 block text-[10px] font-semibold text-white/60">Summe aller Phasen</span>
+                  </span>
+                  <span className="text-right font-display text-xl font-bold">{totalMinutes} Min · bis {addMinutes(plan.startTime, totalMinutes)}</span>
                 </div>
               </div>
             </div>
