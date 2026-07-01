@@ -29,6 +29,8 @@ export const initialPlan = (): Plan => ({
   situationImageDataUrl: "",
   situationImageName: "",
   globalGoal: "Die Lernenden können …",
+  observationEnabled: false,
+  observationTask: "",
   date: new Date().toISOString().slice(0, 10),
   startTime: "08:00",
   preparation: { before: "", during: "", after: "" },
