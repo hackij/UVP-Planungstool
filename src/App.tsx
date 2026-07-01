@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BookOpen, Check, ChevronRight, Clock3, Download, FileDown, Grid3X3,
-  Menu, Plus, Printer, Save, Sparkles, Trash2, Upload, X,
+  BookOpen, Check, ChevronRight, ClipboardCheck, Clock3, Download, FileDown, Grid3X3,
+  Menu, Plus, Printer, RotateCcw, Save, Sparkles, Trash2, Upload, X,
 } from "lucide-react";
 import { initialPlan, phaseTemplate } from "./data.ts";
+import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
 import type { CompetencyArea, CompetencyDimension, Phase, Plan } from "./types.ts";
 
 const STORAGE_KEY = "uvp-studio-plan-v1";
@@ -31,6 +32,7 @@ const normalizePlan = (candidate: unknown): Plan => {
     ...fallback,
     ...partial,
     preparation: { ...fallback.preparation, ...(partial.preparation ?? {}) },
+    criteriaChecks: { ...fallback.criteriaChecks, ...(partial.criteriaChecks ?? {}) },
     phases: partial.phases.map((phase, index) => {
       const template = phaseTemplate(index);
       return {
@@ -58,10 +60,12 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(plan.phases[0]?.id ?? "");
   const [matrixOpen, setMatrixOpen] = useState(true);
   const [mobileNav, setMobileNav] = useState(false);
+  const [criteriaOpen, setCriteriaOpen] = useState(false);
   const [saved, setSaved] = useState(true);
   const importRef = useRef<HTMLInputElement>(null);
 
   const totalMinutes = useMemo(() => plan.phases.reduce((sum, p) => sum + Number(p.minutes || 0), 0), [plan.phases]);
+  const checkedCriteria = useMemo(() => Object.values(plan.criteriaChecks).filter(Boolean).length, [plan.criteriaChecks]);
   const selected = plan.phases.find((p) => p.id === selectedId) ?? plan.phases[0];
 
   useEffect(() => {
@@ -72,6 +76,18 @@ export default function App() {
     }, 350);
     return () => window.clearTimeout(timer);
   }, [plan]);
+
+  useEffect(() => {
+    if (!criteriaOpen) return;
+    const handleKey = (event: KeyboardEvent) => event.key === "Escape" && setCriteriaOpen(false);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [criteriaOpen]);
 
   const updatePlan = <K extends keyof Plan>(key: K, value: Plan[K]) => setPlan((old) => ({ ...old, [key]: value }));
   const updatePhase = (id: string, patch: Partial<Phase>) =>
@@ -142,6 +158,11 @@ export default function App() {
                 {saved ? <Check size={14} /> : <Save size={14} className="animate-pulse" />}
                 {saved ? "Lokal gespeichert" : "Speichert …"}
               </span>
+              <button className="icon-btn" onClick={() => setCriteriaOpen(true)}>
+                <ClipboardCheck size={16} />
+                Kriterien
+                {checkedCriteria > 0 && <span className="rounded-full bg-lime px-2 py-0.5 text-[10px] text-ink">{checkedCriteria}/{EXAM_CRITERIA_COUNT}</span>}
+              </button>
               <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Import</button>
               <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON</button>
               <button className="icon-btn border-ink bg-ink text-white hover:bg-moss" onClick={() => window.print()}><FileDown size={16} />PDF exportieren</button>
@@ -152,6 +173,7 @@ export default function App() {
           </div>
           {mobileNav && (
             <div className="grid gap-2 border-t border-ink/10 bg-white p-4 md:hidden">
+              <button className="icon-btn" onClick={() => { setCriteriaOpen(true); setMobileNav(false); }}><ClipboardCheck size={16} />Prüfungskriterien</button>
               <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Plan importieren</button>
               <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON exportieren</button>
               <button className="icon-btn bg-ink text-white" onClick={() => window.print()}><Printer size={16} />Als PDF drucken</button>
@@ -393,8 +415,88 @@ export default function App() {
           </section>
         </main>
       </div>
+      {criteriaOpen && (
+        <ExamCriteriaModal
+          checked={plan.criteriaChecks}
+          onClose={() => setCriteriaOpen(false)}
+          onToggle={(id) => updatePlan("criteriaChecks", { ...plan.criteriaChecks, [id]: !plan.criteriaChecks[id] })}
+          onReset={() => updatePlan("criteriaChecks", {})}
+        />
+      )}
       <PrintDocument plan={plan} totalMinutes={totalMinutes} />
     </>
+  );
+}
+
+function ExamCriteriaModal({
+  checked,
+  onClose,
+  onToggle,
+  onReset,
+}: {
+  checked: Record<string, boolean>;
+  onClose: () => void;
+  onToggle: (id: string) => void;
+  onReset: () => void;
+}) {
+  const count = Object.values(checked).filter(Boolean).length;
+  const percent = Math.round((count / EXAM_CRITERIA_COUNT) * 100);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="criteria-title" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] bg-paper shadow-2xl">
+        <div className="border-b border-ink/10 bg-white px-5 py-5 sm:px-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-ink text-lime"><ClipboardCheck size={21} /></div>
+              <div>
+                <div className="label !mb-1">Planungs-Gegencheck</div>
+                <h2 id="criteria-title" className="font-display text-2xl font-bold sm:text-3xl">Kriterien der Prüfungslehrprobe</h2>
+              </div>
+            </div>
+            <button aria-label="Kriterien schließen" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-ink/10 hover:bg-paper" onClick={onClose}><X size={19} /></button>
+          </div>
+          <div className="mt-5 flex items-center gap-3">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-moss transition-all" style={{ width: `${percent}%` }} /></div>
+            <strong className="whitespace-nowrap text-xs">{count} von {EXAM_CRITERIA_COUNT}</strong>
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-ink/50">Nutze die Liste nach deiner Planung als Selbstcheck. Einige Kriterien zeigen sich erst in der tatsächlichen Durchführung der Stunde.</p>
+          <p className="mt-1 text-[10px] font-semibold text-ink/35">Quelle: Niederschrift der Prüfungslehrprobe · Stand 13.04.2021</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="space-y-4">
+            {EXAM_CRITERIA.map((group) => {
+              const groupCount = group.items.filter((item) => checked[item.id]).length;
+              return (
+                <section key={group.id} className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+                  <div className="flex items-center justify-between gap-3 bg-ink px-4 py-3 text-white">
+                    <h3 className="text-sm font-bold"><span className="mr-2 text-lime">{group.id}</span>{group.title}</h3>
+                    <span className="text-[10px] font-bold text-white/55">{groupCount}/{group.items.length}</span>
+                  </div>
+                  <div className="divide-y divide-ink/8">
+                    {group.items.map((item) => (
+                      <label key={item.id} className={`flex cursor-pointer items-start gap-3 p-4 text-left transition hover:bg-paper/70 ${checked[item.id] ? "bg-lime/10" : ""}`}>
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-5 w-5 shrink-0 accent-[#315f4d]"
+                          checked={Boolean(checked[item.id])}
+                          onChange={() => onToggle(item.id)}
+                        />
+                        <span className="text-xs font-bold text-ink/40">{item.id}</span>
+                        <span className={`text-sm leading-relaxed ${checked[item.id] ? "text-ink/45 line-through" : "text-ink/80"}`}>{item.text}</span>
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-ink/10 bg-white px-5 py-4 sm:px-7">
+          <button className="inline-flex items-center gap-2 text-xs font-bold text-ink/45 hover:text-clay disabled:opacity-30" disabled={count === 0} onClick={onReset}><RotateCcw size={14} />Häkchen zurücksetzen</button>
+          <button className="rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white hover:bg-moss" onClick={onClose}>Check abschließen</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

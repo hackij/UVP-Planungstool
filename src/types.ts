@@ -29,5 +29,6 @@ export interface Plan {
   date: string;
   startTime: string;
   preparation: { before: string; during: string; after: string };
+  criteriaChecks: Record<string, boolean>;
   phases: Phase[];
 }

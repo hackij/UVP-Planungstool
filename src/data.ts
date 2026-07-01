@@ -28,6 +28,7 @@ export const initialPlan = (): Plan => ({
   date: new Date().toISOString().slice(0, 10),
   startTime: "08:00",
   preparation: { before: "", during: "", after: "" },
+  criteriaChecks: {},
   phases: [
     { ...phase("Orientieren", 10, PHASE_COLORS[0], "Wir erkennen die zentrale Herausforderung …"), moderation: "Ankommen, aktivieren, irritieren: Was fällt euch auf?" },
     phase("Informieren", 15, PHASE_COLORS[1], "Wir erschließen die nötigen Informationen …"),
