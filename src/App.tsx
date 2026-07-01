@@ -29,22 +29,36 @@ const addMinutes = (time: string, minutes: number) => {
   return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 };
 
-const prepareSituationImage = (file: File) => new Promise<string>((resolve, reject) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-  if (!allowedTypes.includes(file.type)) {
-    reject(new Error("Bitte verwende ein JPEG-, PNG- oder WebP-Bild."));
-    return;
+const preparePdfPreview = async (file: File) => {
+  const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+  GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
+  const loadingTask = getDocument({ data: await file.arrayBuffer() });
+  const pdf = await loadingTask.promise;
+  try {
+    const page = await pdf.getPage(1);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(2, 1200 / Math.max(baseViewport.width, baseViewport.height));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(viewport.width));
+    canvas.height = Math.max(1, Math.round(viewport.height));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Die PDF-Vorschau konnte nicht erzeugt werden.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvas, canvasContext: context, viewport, background: "#ffffff" }).promise;
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } finally {
+    await loadingTask.destroy();
   }
-  if (file.size > 10 * 1024 * 1024) {
-    reject(new Error("Das Bild darf höchstens 10 MB groß sein."));
-    return;
-  }
+};
 
+const prepareImagePreview = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader();
-  reader.onerror = () => reject(new Error("Das Bild konnte nicht gelesen werden."));
+  reader.onerror = () => reject(new Error("Die Bilddatei konnte nicht gelesen werden."));
   reader.onload = () => {
     const image = new Image();
-    image.onerror = () => reject(new Error("Das Bild konnte nicht verarbeitet werden."));
+    image.onerror = () => reject(new Error("Die Bilddatei konnte nicht verarbeitet werden."));
     image.onload = () => {
       const maxEdge = 1200;
       const scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight));
@@ -55,7 +69,7 @@ const prepareSituationImage = (file: File) => new Promise<string>((resolve, reje
       canvas.height = height;
       const context = canvas.getContext("2d");
       if (!context) {
-        reject(new Error("Das Bild konnte nicht verarbeitet werden."));
+        reject(new Error("Die Bilddatei konnte nicht verarbeitet werden."));
         return;
       }
       context.fillStyle = "#ffffff";
@@ -67,6 +81,19 @@ const prepareSituationImage = (file: File) => new Promise<string>((resolve, reje
   };
   reader.readAsDataURL(file);
 });
+
+const prepareSituationImage = async (file: File) => {
+  const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+  const isImage = ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+  if (!isPdf && !isImage) throw new Error("Bitte verwende JPEG, PNG, WebP oder PDF.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Die Datei darf höchstens 10 MB groß sein.");
+  try {
+    return isPdf ? await preparePdfPreview(file) : await prepareImagePreview(file);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Die ")) throw error;
+    throw new Error(isPdf ? "Die PDF-Datei konnte nicht verarbeitet werden." : "Die Bilddatei konnte nicht verarbeitet werden.");
+  }
+};
 
 const normalizePlan = (candidate: unknown): Plan => {
   const fallback = initialPlan();
@@ -297,13 +324,13 @@ export default function App() {
                     />
                   </label>
                   <div>
-                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Bild der Einstiegssituation</span>
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Datei der Einstiegssituation</span>
                     <input
                       ref={situationImageRef}
                       className="hidden"
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      aria-label="Bild der Einstiegssituation auswählen"
+                      accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+                      aria-label="Datei der Einstiegssituation auswählen"
                       onChange={(event) => uploadSituationImage(event.target.files?.[0])}
                     />
                     {plan.situationImageDataUrl ? (
@@ -313,12 +340,15 @@ export default function App() {
                           alt={plan.situationImageName || "Einstiegssituation"}
                           className="h-full w-full object-cover"
                         />
+                        {/\.pdf$/i.test(plan.situationImageName) && (
+                          <span className="absolute left-3 top-3 rounded-full bg-clay px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white">PDF · Seite 1</span>
+                        )}
                         <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-ink/90 to-transparent px-3 pb-3 pt-8">
                           <span className="min-w-0 truncate text-[10px] font-semibold text-white/80">{plan.situationImageName || "Einstiegsbild"}</span>
                           <span className="flex shrink-0 gap-1.5">
                             <button
                               type="button"
-                              aria-label="Bild der Einstiegssituation ersetzen"
+                              aria-label="Datei der Einstiegssituation ersetzen"
                               className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink transition hover:bg-white"
                               onClick={() => situationImageRef.current?.click()}
                             >
@@ -326,7 +356,7 @@ export default function App() {
                             </button>
                             <button
                               type="button"
-                              aria-label="Bild der Einstiegssituation entfernen"
+                              aria-label="Datei der Einstiegssituation entfernen"
                               className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-clay transition hover:bg-white"
                               onClick={removeSituationImage}
                             >
@@ -343,8 +373,8 @@ export default function App() {
                         disabled={imageBusy}
                       >
                         <span className="mb-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-sky"><ImagePlus size={19} /></span>
-                        <span className="text-xs font-bold">{imageBusy ? "Bild wird vorbereitet …" : "Bild hochladen"}</span>
-                        <span className="mt-1 text-[10px] leading-snug text-white/40">JPEG, PNG oder WebP · max. 10 MB</span>
+                        <span className="text-xs font-bold">{imageBusy ? "Datei wird vorbereitet …" : "Bild oder PDF hochladen"}</span>
+                        <span className="mt-1 text-[10px] leading-snug text-white/40">JPEG, PNG, WebP oder PDF · max. 10 MB</span>
                       </button>
                     )}
                     {imageError && <p className="mt-2 text-[10px] font-semibold leading-snug text-clay">{imageError}</p>}
