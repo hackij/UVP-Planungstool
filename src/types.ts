@@ -30,6 +30,8 @@ export interface Plan {
   situationImageDataUrl: string;
   situationImageName: string;
   globalGoal: string;
+  observationEnabled: boolean;
+  observationTask: string;
   date: string;
   startTime: string;
   preparation: { before: string; during: string; after: string };

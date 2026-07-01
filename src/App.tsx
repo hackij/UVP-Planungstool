@@ -356,6 +356,44 @@ export default function App() {
                   className="min-h-[88px] w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-lg leading-relaxed text-white outline-none backdrop-blur focus:border-lime sm:text-xl"
                   value={plan.globalGoal} onChange={(e) => updatePlan("globalGoal", e.target.value)}
                 />
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-[.14em] text-sky">Beobachtungsauftrag</div>
+                      <p className="mt-1 text-xs text-white/60">Ich möchte den Hospitierenden einen Beobachtungsauftrag geben.</p>
+                    </div>
+                    <div className="flex rounded-full bg-white/10 p-1" aria-label="Beobachtungsauftrag auswählen">
+                      <button
+                        type="button"
+                        aria-pressed={plan.observationEnabled}
+                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${plan.observationEnabled ? "bg-clay text-white" : "text-white/55 hover:text-white"}`}
+                        onClick={() => updatePlan("observationEnabled", true)}
+                      >
+                        Ja
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={!plan.observationEnabled}
+                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${!plan.observationEnabled ? "bg-white text-ink" : "text-white/55 hover:text-white"}`}
+                        onClick={() => updatePlan("observationEnabled", false)}
+                      >
+                        Nein
+                      </button>
+                    </div>
+                  </div>
+                  {plan.observationEnabled && (
+                    <label className="mt-4 block">
+                      <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Beobachtungsauftrag formulieren</span>
+                      <textarea
+                        aria-label="Beobachtungsauftrag formulieren"
+                        className="min-h-24 w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-relaxed text-white outline-none placeholder:text-white/25 focus:border-lime"
+                        placeholder="Beobachtet bitte besonders, wie …"
+                        value={plan.observationTask}
+                        onChange={(event) => updatePlan("observationTask", event.target.value)}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="rounded-2xl bg-white/10 p-4">
@@ -559,23 +597,6 @@ export default function App() {
               </div>
             </section>
           )}
-
-          <section className="mt-8">
-            <div className="mb-4"><div className="label">Organisation</div><h2 className="font-display text-2xl font-bold sm:text-3xl">Vorbereitet durch die Stunde</h2></div>
-            <div className="grid gap-4 lg:grid-cols-3">
-              {([
-                ["before", "Vor der Stunde", "Raum, Technik, Material, Ausdrucke …"],
-                ["during", "Während der Stunde", "Beobachtungsaufträge, Zeitwächter, Plan B …"],
-                ["after", "Nach der Stunde", "Ergebnisse sichern, Feedback, Anschluss …"],
-              ] as const).map(([key, title, placeholder], index) => (
-                <label key={key} className="card p-5">
-                  <span className="mb-4 grid h-9 w-9 place-items-center rounded-full bg-ink text-sm font-bold text-lime">0{index + 1}</span>
-                  <span className="font-display text-xl font-bold">{title}</span>
-                  <textarea className="field mt-4 min-h-32 border-0 bg-paper" placeholder={placeholder} value={plan.preparation[key]} onChange={(e) => updatePlan("preparation", { ...plan.preparation, [key]: e.target.value })} />
-                </label>
-              ))}
-            </div>
-          </section>
 
           <section className="mb-8 mt-8 overflow-hidden rounded-[2rem] border border-ink/10 bg-white p-5 sm:p-7">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -885,6 +906,12 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             <div className="text-[8pt] font-bold uppercase tracking-[.14em] text-white/45">Globalziel</div>
             <p className="mt-1 text-[12pt] leading-snug">{plan.globalGoal}</p>
           </div>
+          {plan.observationEnabled && plan.observationTask && (
+            <div className="mt-3 border-t border-white/15 pt-2.5">
+              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-sky">Beobachtungsauftrag für Hospitierende</div>
+              <p className="mt-1 line-clamp-2 text-[8pt] leading-snug text-white/75">{plan.observationTask}</p>
+            </div>
+          )}
           <div className="mt-5 grid grid-cols-[1fr_auto] items-end gap-5">
             <div className="text-[8pt] text-white/55">
               <div className="font-bold uppercase tracking-[.13em]">Datum · Klasse</div>
