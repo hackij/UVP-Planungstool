@@ -1,6 +1,7 @@
 import type { Competencies, Phase, Plan } from "./types.ts";
 
-export const PHASE_COLORS = ["#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268"];
+// Farbenblindheitsfreundliche, klar unterscheidbare Akzentfarben.
+export const PHASE_COLORS = ["#009E73", "#E69F00", "#0072B2", "#D55E00", "#8B5CF6", "#CC79A7", "#56B4E9", "#7A7F00"];
 
 export const emptyCompetencies = (): Competencies => ({
   fach: { wissen: 0, wollen: 0, koennen: 0 },
@@ -23,26 +24,19 @@ const phase = (title: string, minutes: number, color: string, goal = ""): Phase 
 });
 
 export const initialPlan = (): Plan => ({
-  topic: "Lernsituation / Thema der Stunde",
+  topic: "",
   className: "",
   situationDescription: "",
   situationImageDataUrl: "",
   situationImageName: "",
-  globalGoal: "Die Lernenden können …",
+  globalGoal: "",
   observationEnabled: false,
   observationTask: "",
-  date: new Date().toISOString().slice(0, 10),
-  startTime: "08:00",
+  date: "",
+  startTime: "",
   preparation: { before: "", during: "", after: "" },
   criteriaChecks: {},
-  phases: [
-    { ...phase("Orientieren", 10, PHASE_COLORS[0], "Wir erkennen die zentrale Herausforderung …"), moderation: "Ankommen, aktivieren, irritieren: Was fällt euch auf?" },
-    phase("Informieren", 15, PHASE_COLORS[1], "Wir erschließen die nötigen Informationen …"),
-    phase("Planen", 10, PHASE_COLORS[2], "Wir entwickeln einen begründeten Lösungsweg …"),
-    phase("Durchführen", 25, PHASE_COLORS[3], "Wir setzen unseren Plan selbstständig um …"),
-    phase("Bewerten", 15, PHASE_COLORS[4], "Wir prüfen unser Ergebnis anhand der Kriterien …"),
-    phase("Reflektieren", 10, PHASE_COLORS[5], "Wir leiten Erkenntnisse für unser weiteres Lernen ab …"),
-  ],
+  phases: [],
 });
 
 export const phaseTemplate = (index: number): Phase =>

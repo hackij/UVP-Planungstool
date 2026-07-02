@@ -1,16 +1,19 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, Check, ChevronRight, ClipboardCheck, Clock3, Download, FileDown, Grid3X3,
-  ImagePlus, LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Trash2, Upload, X,
+  GripVertical, ImagePlus, LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Trash2, Upload, X,
 } from "lucide-react";
-import { initialPlan, phaseTemplate } from "./data.ts";
+import { initialPlan, PHASE_COLORS, phaseTemplate } from "./data.ts";
 import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
 import { VERB_CATALOG } from "./verbCatalog.ts";
 import type { CompetencyArea, CompetencyDimension, Phase, Plan } from "./types.ts";
 
 const STORAGE_KEY = "uvp-studio-plan-v1";
-const SCHOOL_LOGO = "./bs1-spengler-logo-weiss.png";
-const LEGACY_PHASE_COLORS = new Set(["#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb"]);
+const SCHOOL_LOGO = "./bs1-logo-hell.png";
+const LEGACY_PHASE_COLORS = new Set([
+  "#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb",
+  "#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268",
+]);
 const areas: { key: CompetencyArea; label: string; short: string }[] = [
   { key: "fach", label: "Fachkompetenz", short: "Fach" },
   { key: "selbst", label: "Selbstkompetenz", short: "Selbst" },
@@ -24,6 +27,7 @@ const landscapeDimensions: { key: CompetencyDimension; label: string }[] = [
 ];
 
 const addMinutes = (time: string, minutes: number) => {
+  if (!/^\d{2}:\d{2}$/.test(time)) return "—";
   const [h = 0, m = 0] = time.split(":").map(Number);
   const total = h * 60 + m + minutes;
   return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
@@ -99,7 +103,8 @@ const normalizePlan = (candidate: unknown): Plan => {
   const fallback = initialPlan();
   if (!candidate || typeof candidate !== "object") return fallback;
   const partial = candidate as Partial<Plan>;
-  if (!Array.isArray(partial.phases) || partial.phases.length === 0) return fallback;
+  if (!Array.isArray(partial.phases)) return fallback;
+  const seenIds = new Set<string>();
   return {
     ...fallback,
     ...partial,
@@ -107,10 +112,14 @@ const normalizePlan = (candidate: unknown): Plan => {
     criteriaChecks: { ...fallback.criteriaChecks, ...(partial.criteriaChecks ?? {}) },
     phases: partial.phases.map((phase, index) => {
       const template = phaseTemplate(index);
+      const suppliedId = typeof phase.id === "string" ? phase.id.trim() : "";
+      const id = suppliedId && !seenIds.has(suppliedId) ? suppliedId : crypto.randomUUID();
+      seenIds.add(id);
       return {
         ...template,
         ...phase,
-        color: LEGACY_PHASE_COLORS.has(phase.color) ? template.color : phase.color,
+        id,
+        color: typeof phase.color === "string" && phase.color && !LEGACY_PHASE_COLORS.has(phase.color) ? phase.color : template.color,
         content: phase.content ?? "",
         differentiationDetails: {
           ...template.differentiationDetails,
@@ -138,6 +147,7 @@ export default function App() {
   const [saved, setSaved] = useState(true);
   const [imageBusy, setImageBusy] = useState(false);
   const [imageError, setImageError] = useState("");
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const situationImageRef = useRef<HTMLInputElement>(null);
 
@@ -199,7 +209,7 @@ export default function App() {
     reader.onload = () => {
       try {
         const raw = JSON.parse(String(reader.result)) as Partial<Plan>;
-        if (!raw.globalGoal || !Array.isArray(raw.phases)) throw new Error();
+        if (!Array.isArray(raw.phases)) throw new Error();
         const next = normalizePlan(raw);
         setPlan(next);
         setSelectedId(next.phases[0]?.id ?? "");
@@ -233,51 +243,82 @@ export default function App() {
   };
 
   const addPhase = () => {
-    const next = phaseTemplate(plan.phases.length);
+    const usedColors = new Set(plan.phases.map((phase) => phase.color));
+    const availableIndex = PHASE_COLORS.findIndex((color) => !usedColors.has(color));
+    const next = phaseTemplate(availableIndex >= 0 ? availableIndex : plan.phases.length);
     setPlan((old) => ({ ...old, phases: [...old.phases, next] }));
     setSelectedId(next.id);
   };
 
   const deletePhase = (id: string) => {
-    if (plan.phases.length <= 1) return;
     const index = plan.phases.findIndex((p) => p.id === id);
     const next = plan.phases.filter((p) => p.id !== id);
     setPlan((old) => ({ ...old, phases: next }));
     setSelectedId(next[Math.max(0, index - 1)]?.id ?? "");
   };
 
+  const reorderPhases = (sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return;
+    setPlan((old) => {
+      const sourceIndex = old.phases.findIndex((phase) => phase.id === sourceId);
+      const targetIndex = old.phases.findIndex((phase) => phase.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0) return old;
+      const reordered = [...old.phases];
+      const [moved] = reordered.splice(sourceIndex, 1);
+      const targetAfterRemoval = reordered.findIndex((phase) => phase.id === targetId);
+      const insertionIndex = sourceIndex < targetIndex ? targetAfterRemoval + 1 : targetAfterRemoval;
+      reordered.splice(insertionIndex, 0, moved);
+      return { ...old, phases: reordered };
+    });
+  };
+
+  const resetPlan = () => {
+    if (!window.confirm("Möchtest du die gesamte Planung wirklich zurücksetzen? Alle Eingaben, Phasen, Zeiten und Kompetenzzuordnungen werden gelöscht.")) return;
+    const next = initialPlan();
+    localStorage.removeItem(STORAGE_KEY);
+    setPlan(next);
+    setSelectedId("");
+    setCriteriaOpen(false);
+    setVerbCatalogOpen(null);
+    setMobileNav(false);
+    setImageError("");
+    if (situationImageRef.current) situationImageRef.current.value = "";
+  };
+
   return (
     <>
       <div className="app-shell flex min-h-screen flex-col bg-paper">
-        <header className="sticky top-0 z-40 border-b-2 border-clay bg-ink text-white shadow-lg shadow-ink/10">
+        <header className="sticky top-0 z-40 border-b border-ink/10 bg-white/95 text-ink shadow-sm backdrop-blur-xl">
           <div className="mx-auto flex h-[86px] max-w-[1540px] items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3 sm:gap-5">
-              <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth und Technikerschule" className="h-11 w-auto shrink-0 object-contain sm:h-14" />
-              <div className="min-w-0 border-l border-white/20 pl-3 sm:pl-5">
-                <div className="font-display truncate text-lg font-bold uppercase leading-none text-white sm:text-2xl">Seminar Metalltechnik</div>
-                <div className="mt-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-sky sm:text-[10px]">UVP Studio · Vom Ziel zur Stunde</div>
+              <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth und Technikerschule" className="h-11 w-auto max-w-[138px] shrink-0 object-contain sm:h-14 sm:max-w-[180px]" />
+              <div className="min-w-0 border-l border-ink/10 pl-3 sm:pl-5">
+                <div className="font-display truncate text-lg font-bold uppercase leading-none text-ink sm:text-2xl">Seminar Metalltechnik</div>
+                <div className="mt-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-moss sm:text-[10px]">UVP Studio · Vom Ziel zur Stunde</div>
               </div>
             </div>
-            <div className="hidden items-center gap-2 md:flex">
-              <span className="mr-2 inline-flex items-center gap-1.5 text-xs font-medium text-white/55">
+            <div className="hidden items-center gap-2 xl:flex">
+              <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-medium text-ink/45">
                 {saved ? <Check size={14} /> : <Save size={14} className="animate-pulse" />}
                 {saved ? "Lokal gespeichert" : "Speichert …"}
               </span>
-              <button className="icon-btn border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15" onClick={() => setCriteriaOpen(true)}>
+              <button className="icon-btn border-clay/25 text-clay hover:border-clay/50 hover:bg-clay/5" onClick={resetPlan}><RotateCcw size={16} />Planung zurücksetzen</button>
+              <button className="icon-btn" onClick={() => setCriteriaOpen(true)}>
                 <ClipboardCheck size={16} />
                 Kriterien
-                {checkedCriteria > 0 && <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-ink">{checkedCriteria}/{EXAM_CRITERIA_COUNT}</span>}
+                {checkedCriteria > 0 && <span className="rounded-full bg-lime px-2 py-0.5 text-[10px] text-ink">{checkedCriteria}/{EXAM_CRITERIA_COUNT}</span>}
               </button>
-              <button className="icon-btn border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15" onClick={() => importRef.current?.click()}><Upload size={16} />Import</button>
-              <button className="icon-btn border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15" onClick={exportJson}><Download size={16} />JSON</button>
+              <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Import</button>
+              <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON</button>
               <button className="icon-btn border-clay bg-clay text-white hover:border-clay hover:bg-[#8d1920]" onClick={() => window.print()}><FileDown size={16} />PDF exportieren</button>
             </div>
-            <button aria-label="Menü öffnen" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 md:hidden" onClick={() => setMobileNav(!mobileNav)}>
+            <button aria-label="Menü öffnen" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-ink/10 bg-paper xl:hidden" onClick={() => setMobileNav(!mobileNav)}>
               {mobileNav ? <X /> : <Menu />}
             </button>
           </div>
           {mobileNav && (
-            <div className="grid gap-2 border-t border-ink/10 bg-white p-4 md:hidden">
+            <div className="grid gap-2 border-t border-ink/10 bg-white p-4 xl:hidden">
+              <button className="icon-btn border-clay/25 text-clay" onClick={resetPlan}><RotateCcw size={16} />Planung zurücksetzen</button>
               <button className="icon-btn" onClick={() => { setCriteriaOpen(true); setMobileNav(false); }}><ClipboardCheck size={16} />Prüfungskriterien</button>
               <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Plan importieren</button>
               <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON exportieren</button>
@@ -288,26 +329,27 @@ export default function App() {
         </header>
 
         <main className="mx-auto w-full max-w-[1540px] flex-1 px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-          <section className="relative overflow-hidden rounded-[2rem] bg-ink px-5 py-7 text-white shadow-xl shadow-ink/10 sm:px-8 lg:px-10 lg:py-9">
+          <section className="relative overflow-hidden rounded-[2rem] border border-ink/10 bg-white px-5 py-7 text-ink shadow-soft sm:px-8 lg:px-10 lg:py-9">
             <div className="absolute inset-x-0 top-0 h-1 bg-clay" />
             <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-sky/10" />
             <div className="relative grid gap-6 lg:grid-cols-[1fr_280px] lg:items-end">
               <div>
-                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-sky"><BookOpen size={15} />Unterrichtsentwurf</div>
+                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsentwurf</div>
                 <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_210px]">
                   <label>
-                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Thema / Lernsituation</span>
+                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Thema / Lernsituation</span>
                     <input
                       aria-label="Thema der Stunde"
-                      className="w-full border-0 border-b border-white/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-white/30 focus:border-lime sm:text-3xl"
+                      className="w-full border-0 border-b border-ink/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-ink/25 focus:border-moss sm:text-3xl"
+                      placeholder="Thema der Stunde"
                       value={plan.topic} onChange={(e) => updatePlan("topic", e.target.value)}
                     />
                   </label>
                   <label>
-                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Klasse</span>
+                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Klasse</span>
                     <input
                       aria-label="Klasse"
-                      className="w-full border-0 border-b border-white/15 bg-transparent pb-2 text-lg font-bold outline-none placeholder:text-white/25 focus:border-lime sm:text-xl"
+                      className="w-full border-0 border-b border-ink/15 bg-transparent pb-2 text-lg font-bold outline-none placeholder:text-ink/25 focus:border-moss sm:text-xl"
                       placeholder="z. B. Bäcker 11"
                       value={plan.className} onChange={(e) => updatePlan("className", e.target.value)}
                     />
@@ -315,16 +357,16 @@ export default function App() {
                 </div>
                 <div className="mb-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
                   <label className="block">
-                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</span>
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Situationsbeschreibung · berufliche Handlung</span>
                     <textarea
                       aria-label="Situationsbeschreibung"
-                      className="min-h-[132px] w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-relaxed text-white outline-none backdrop-blur placeholder:text-white/25 focus:border-lime"
+                      className="min-h-[132px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
                       placeholder="Welche berufliche Handlung bildet den Ausgangspunkt? Beschreibe Betriebssituation, Auftrag, Problem und Handlungsanlass …"
                       value={plan.situationDescription} onChange={(e) => updatePlan("situationDescription", e.target.value)}
                     />
                   </label>
                   <div>
-                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Datei der Einstiegssituation</span>
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Datei der Einstiegssituation</span>
                     <input
                       ref={situationImageRef}
                       className="hidden"
@@ -334,7 +376,7 @@ export default function App() {
                       onChange={(event) => uploadSituationImage(event.target.files?.[0])}
                     />
                     {plan.situationImageDataUrl ? (
-                      <div className="group relative h-[132px] overflow-hidden rounded-2xl border border-white/15 bg-white/10">
+                      <div className="group relative h-[132px] overflow-hidden rounded-2xl border border-ink/10 bg-paper">
                         <img
                           src={plan.situationImageDataUrl}
                           alt={plan.situationImageName || "Einstiegssituation"}
@@ -368,35 +410,36 @@ export default function App() {
                     ) : (
                       <button
                         type="button"
-                        className="flex h-[132px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-white/25 bg-white/5 px-4 text-center transition hover:border-lime hover:bg-white/10"
+                        className="flex h-[132px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-ink/20 bg-paper/60 px-4 text-center transition hover:border-moss hover:bg-sky/5"
                         onClick={() => situationImageRef.current?.click()}
                         disabled={imageBusy}
                       >
-                        <span className="mb-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-sky"><ImagePlus size={19} /></span>
+                        <span className="mb-2 grid h-10 w-10 place-items-center rounded-full bg-sky/15 text-moss"><ImagePlus size={19} /></span>
                         <span className="text-xs font-bold">{imageBusy ? "Datei wird vorbereitet …" : "Bild oder PDF hochladen"}</span>
-                        <span className="mt-1 text-[10px] leading-snug text-white/40">JPEG, PNG, WebP oder PDF · max. 10 MB</span>
+                        <span className="mt-1 text-[10px] leading-snug text-ink/40">JPEG, PNG, WebP oder PDF · max. 10 MB</span>
                       </button>
                     )}
                     {imageError && <p className="mt-2 text-[10px] font-semibold leading-snug text-clay">{imageError}</p>}
                   </div>
                 </div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-white/45">Globalziel der Unterrichtseinheit</label>
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Globalziel der Unterrichtseinheit</label>
                 <textarea
                   aria-label="Globalziel"
-                  className="min-h-[88px] w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-lg leading-relaxed text-white outline-none backdrop-blur focus:border-lime sm:text-xl"
+                  className="min-h-[88px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-lg leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss sm:text-xl"
+                  placeholder="Die Lernenden können …"
                   value={plan.globalGoal} onChange={(e) => updatePlan("globalGoal", e.target.value)}
                 />
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="mt-4 rounded-2xl border border-ink/10 bg-paper/50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[.14em] text-sky">Beobachtungsauftrag</div>
-                      <p className="mt-1 text-xs text-white/60">Ich möchte den Hospitierenden einen Beobachtungsauftrag geben.</p>
+                      <div className="text-[11px] font-bold uppercase tracking-[.14em] text-moss">Beobachtungsauftrag</div>
+                      <p className="mt-1 text-xs text-ink/55">Ich möchte den Hospitierenden einen Beobachtungsauftrag geben.</p>
                     </div>
-                    <div className="flex rounded-full bg-white/10 p-1" aria-label="Beobachtungsauftrag auswählen">
+                    <div className="flex rounded-full bg-ink/5 p-1" aria-label="Beobachtungsauftrag auswählen">
                       <button
                         type="button"
                         aria-pressed={plan.observationEnabled}
-                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${plan.observationEnabled ? "bg-clay text-white" : "text-white/55 hover:text-white"}`}
+                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${plan.observationEnabled ? "bg-clay text-white" : "text-ink/45 hover:text-ink"}`}
                         onClick={() => updatePlan("observationEnabled", true)}
                       >
                         Ja
@@ -404,7 +447,7 @@ export default function App() {
                       <button
                         type="button"
                         aria-pressed={!plan.observationEnabled}
-                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${!plan.observationEnabled ? "bg-white text-ink" : "text-white/55 hover:text-white"}`}
+                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${!plan.observationEnabled ? "bg-white text-ink shadow-sm" : "text-ink/45 hover:text-ink"}`}
                         onClick={() => updatePlan("observationEnabled", false)}
                       >
                         Nein
@@ -413,10 +456,10 @@ export default function App() {
                   </div>
                   {plan.observationEnabled && (
                     <label className="mt-4 block">
-                      <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Beobachtungsauftrag formulieren</span>
+                      <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Beobachtungsauftrag formulieren</span>
                       <textarea
                         aria-label="Beobachtungsauftrag formulieren"
-                        className="min-h-24 w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-relaxed text-white outline-none placeholder:text-white/25 focus:border-lime"
+                        className="min-h-24 w-full rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss"
                         placeholder="Beobachtet bitte besonders, wie …"
                         value={plan.observationTask}
                         onChange={(event) => updatePlan("observationTask", event.target.value)}
@@ -426,13 +469,13 @@ export default function App() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <label className="rounded-2xl bg-white/10 p-4">
-                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/45">Datum</span>
-                  <input type="date" className="w-full bg-transparent text-sm font-semibold outline-none [color-scheme:dark]" value={plan.date} onChange={(e) => updatePlan("date", e.target.value)} />
+                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Datum</span>
+                  <input type="date" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.date} onChange={(e) => updatePlan("date", e.target.value)} />
                 </label>
-                <label className="rounded-2xl bg-white/10 p-4">
-                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/45">Beginn</span>
-                  <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none [color-scheme:dark]" value={plan.startTime} onChange={(e) => updatePlan("startTime", e.target.value)} />
+                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Beginn</span>
+                  <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.startTime} onChange={(e) => updatePlan("startTime", e.target.value)} />
                 </label>
                 <div className="col-span-2 flex items-center justify-between gap-3 rounded-2xl bg-clay px-4 py-3 text-white">
                   <span>
@@ -449,12 +492,12 @@ export default function App() {
             <div className="mb-4 flex items-end justify-between">
               <div>
                 <div className="label">Der rote Faden deiner Stunde</div>
-                <h2 className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsverlaufsplan</h2>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsverlaufplan</h2>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <button
                   className="icon-btn border-clay/25 text-clay hover:border-clay/50 hover:bg-clay/5 disabled:cursor-not-allowed disabled:border-ink/10 disabled:text-ink/25 disabled:hover:bg-white"
-                  disabled={!selected || plan.phases.length <= 1}
+                  disabled={!selected}
                   onClick={() => selected && deletePhase(selected.id)}
                 >
                   <Trash2 size={16} />
@@ -464,37 +507,77 @@ export default function App() {
                 <button className="icon-btn" onClick={addPhase}><Plus size={17} /> <span className="hidden sm:inline">Phase</span></button>
               </div>
             </div>
-            <div className="timeline-scroll overflow-x-auto pb-5 pt-2">
-              <div className="relative flex min-w-max items-center gap-3 px-2 py-4">
-                <div className="absolute left-4 right-4 top-1/2 h-px bg-ink/15" />
-                {plan.phases.map((phase, index) => {
-                  const before = plan.phases.slice(0, index).reduce((s, p) => s + Number(p.minutes || 0), 0);
-                  const active = phase.id === selected?.id;
-                  const isEntry = index === 0;
-                  return (
-                    <button
-                      key={phase.id}
-                      onClick={() => setSelectedId(phase.id)}
-                      className={`relative z-10 flex flex-col justify-between overflow-hidden rounded-[2rem] border text-left transition duration-300 ${isEntry ? "h-52 w-64 p-5" : "h-44 w-48 p-4"} ${active ? "scale-[1.025] border-ink bg-white shadow-soft" : "border-ink/10 bg-paper hover:-translate-y-1 hover:bg-white"}`}
-                    >
-                      <div className="absolute right-0 top-0 h-16 w-16 rounded-bl-[3rem] opacity-80" style={{ background: phase.color }} />
-                      <div className="relative">
-                        <span className="text-[10px] font-bold uppercase tracking-[.15em] text-ink/45">{isEntry ? "Einstieg · Fokus" : `Phase ${index + 1}`}</span>
-                        <div className={`mt-2 font-display font-bold leading-tight ${isEntry ? "text-2xl" : "text-xl"}`}>{phase.title || "Ohne Titel"}</div>
-                        {isEntry && <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-ink/55">{phase.moderation || "Moderation ergänzen …"}</p>}
-                      </div>
-                      <div className="relative flex items-end justify-between">
-                        <div>
-                          <div className="text-[10px] font-semibold text-ink/40">{addMinutes(plan.startTime, before)}–{addMinutes(plan.startTime, before + Number(phase.minutes || 0))}</div>
-                          <div className="mt-1 inline-flex items-center gap-1 text-xs font-bold"><Clock3 size={13} />{phase.minutes} Min</div>
-                        </div>
-                        <ChevronRight size={18} className={active ? "text-ink" : "text-ink/25"} />
-                      </div>
-                    </button>
-                  );
-                })}
+            {plan.phases.length === 0 ? (
+              <div className="rounded-[2rem] border border-dashed border-ink/15 bg-white px-6 py-12 text-center">
+                <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-sky/15 text-moss"><Plus size={22} /></div>
+                <h3 className="mt-4 font-display text-xl font-bold">Noch keine Unterrichtsphase angelegt</h3>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-ink/50">Die Planung startet bewusst leer. Lege deine erste Phase an und entwickle einen eigenen Unterrichtsverlauf.</p>
+                <button className="icon-btn mt-5 border-moss bg-moss text-white hover:bg-ink" onClick={addPhase}><Plus size={17} />Erste Phase hinzufügen</button>
               </div>
-            </div>
+            ) : (
+              <div className="timeline-scroll overflow-x-auto pb-5 pt-2">
+                <div className="relative flex min-w-max items-center gap-3 px-2 py-4">
+                  <div className="absolute left-4 right-4 top-1/2 h-px bg-ink/15" />
+                  {plan.phases.map((phase, index) => {
+                    const before = plan.phases.slice(0, index).reduce((s, p) => s + Number(p.minutes || 0), 0);
+                    const active = phase.id === selected?.id;
+                    const isEntry = index === 0;
+                    const dragging = phase.id === draggedId;
+                    return (
+                      <div
+                        key={phase.id}
+                        data-phase-id={phase.id}
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("text/plain", phase.id);
+                          setDraggedId(phase.id);
+                        }}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = "move";
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          reorderPhases(event.dataTransfer.getData("text/plain"), phase.id);
+                          setDraggedId(null);
+                        }}
+                        onDragEnd={() => setDraggedId(null)}
+                        className={`relative z-10 overflow-hidden rounded-[2rem] border bg-white text-left transition duration-300 ${isEntry ? "h-52 w-64" : "h-44 w-48"} ${active ? "scale-[1.025] shadow-soft" : "border-ink/10 hover:-translate-y-1 hover:shadow-soft"} ${dragging ? "opacity-35" : "opacity-100"}`}
+                        style={active ? { borderColor: phase.color, boxShadow: `0 18px 45px ${phase.color}22` } : undefined}
+                      >
+                        <button className={`flex h-full w-full flex-col justify-between text-left ${isEntry ? "p-5" : "p-4"}`} onClick={() => setSelectedId(phase.id)}>
+                          <div className="absolute right-0 top-0 h-16 w-16 rounded-bl-[3rem] opacity-90" style={{ background: phase.color }} />
+                          <div className="relative">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.15em] text-ink/45"><GripVertical size={12} />Phase {index + 1}</span>
+                            <div className={`mt-2 font-display font-bold leading-tight ${isEntry ? "text-2xl" : "text-xl"}`}>{phase.title || "Ohne Titel"}</div>
+                            {isEntry && <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-ink/55">{phase.moderation || "Moderation ergänzen …"}</p>}
+                          </div>
+                          <div className="relative flex items-end justify-between">
+                            <div>
+                              <div className="text-[10px] font-semibold text-ink/40">{addMinutes(plan.startTime, before)}–{addMinutes(plan.startTime, before + Number(phase.minutes || 0))}</div>
+                              <div className="mt-1 inline-flex items-center gap-1 text-xs font-bold"><Clock3 size={13} />{phase.minutes} Min</div>
+                            </div>
+                            <ChevronRight size={18} className={active ? "text-ink" : "text-ink/25"} />
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Phase ${index + 1} löschen`}
+                          className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-clay shadow-sm transition hover:bg-white"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deletePhase(phase.id);
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </section>
 
           {selected && (
@@ -508,7 +591,7 @@ export default function App() {
                       <h3 className="font-display text-2xl font-bold">{selected.title || "Neue Phase"}</h3>
                     </div>
                   </div>
-                  <button title="Phase löschen" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink/35 transition hover:bg-clay/10 hover:text-clay disabled:opacity-20" disabled={plan.phases.length <= 1} onClick={() => deletePhase(selected.id)}><Trash2 size={18} /></button>
+                  <button title="Phase löschen" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink/35 transition hover:bg-clay/10 hover:text-clay" onClick={() => deletePhase(selected.id)}><Trash2 size={18} /></button>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <label><span className="label">Phasen-Titel</span><input className="field" value={selected.title} onChange={(e) => updatePhase(selected.id, { title: e.target.value })} /></label>
@@ -639,10 +722,10 @@ export default function App() {
             <CompetencyLandscape phases={plan.phases} />
           </section>
         </main>
-        <footer className="border-t-2 border-clay bg-ink px-4 py-6 text-white sm:px-6 lg:px-8">
+        <footer className="border-t border-ink/10 bg-white px-4 py-6 text-ink sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-[1540px] flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-display text-sm font-bold uppercase tracking-wide text-sky">Seminar Metalltechnik · UVP Studio</span>
-            <span className="text-white/60">entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
+            <span className="font-display text-sm font-bold uppercase tracking-wide text-moss">Seminar Metalltechnik · UVP Studio</span>
+            <span className="text-ink/45">entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
           </div>
         </footer>
       </div>
@@ -915,89 +998,127 @@ function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; com
 function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: number }) {
   return (
     <div className="print-only">
-      <section className="print-page">
-        <PrintHeader page="01" title="Unterrichtsverlauf" />
-        <div className="mt-6 rounded-[7mm] bg-ink p-[7mm] text-white">
-          <div className="text-[8pt] font-bold uppercase tracking-[.16em] text-sky">Thema der Stunde</div>
-          <h1 className="mt-2 font-display text-[22pt] font-bold leading-tight">{plan.topic}</h1>
-          {(plan.situationDescription || plan.situationImageDataUrl) && (
-            <div className={`mt-4 gap-[5mm] border-t border-white/15 pt-3 ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_40mm]" : ""}`}>
-              <div>
-                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-white/45">Situationsbeschreibung · berufliche Handlung</div>
-                <p className="mt-1 line-clamp-4 text-[8.5pt] leading-snug text-white/75">{plan.situationDescription || "Einstiegssituation zur beruflichen Handlung"}</p>
-              </div>
-              {plan.situationImageDataUrl && (
-                <img
-                  src={plan.situationImageDataUrl}
-                  alt={plan.situationImageName || "Einstiegssituation"}
-                  className="h-[26mm] w-[40mm] rounded-[3mm] object-cover"
-                />
-              )}
+      <section className="print-page print-cover">
+        <PrintHeader page="01" title="Stammdaten" />
+        <div className="mt-[9mm]">
+          <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Unterrichtsplanung</div>
+          <h1 className="mt-2 font-display text-[25pt] font-bold leading-tight">{plan.topic || "Thema der Stunde"}</h1>
+          <div className="mt-[5mm] grid grid-cols-2 gap-[4mm]">
+            <div className="rounded-[4mm] bg-paper p-[4mm]">
+              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Klasse</div>
+              <div className="mt-1 text-[11pt] font-bold">{plan.className || "—"}</div>
             </div>
-          )}
-          <div className="mt-5 border-t border-white/15 pt-4">
-            <div className="text-[8pt] font-bold uppercase tracking-[.14em] text-white/45">Globalziel</div>
-            <p className="mt-1 text-[12pt] leading-snug">{plan.globalGoal}</p>
-          </div>
-          {plan.observationEnabled && plan.observationTask && (
-            <div className="mt-3 border-t border-white/15 pt-2.5">
-              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-sky">Beobachtungsauftrag für Hospitierende</div>
-              <p className="mt-1 line-clamp-2 text-[8pt] leading-snug text-white/75">{plan.observationTask}</p>
-            </div>
-          )}
-          <div className="mt-5 grid grid-cols-[1fr_auto] items-end gap-5">
-            <div className="text-[8pt] text-white/55">
-              <div className="font-bold uppercase tracking-[.13em]">Datum · Klasse</div>
-              <div className="mt-1 text-[10pt] font-semibold text-white">{plan.date}{plan.className ? ` · ${plan.className}` : ""}</div>
-            </div>
-            <div className="min-w-[82mm] rounded-[4mm] bg-clay px-[5mm] py-[3.5mm] text-white">
-              <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-65">Unterrichtszeit</div>
-              <div className="mt-1 font-display text-[17pt] font-bold leading-none">
-                {plan.startTime}–{addMinutes(plan.startTime, totalMinutes)} Uhr
-              </div>
-              <div className="mt-1.5 text-[9pt] font-bold">{totalMinutes} Minuten Gesamtdauer</div>
+            <div className="rounded-[4mm] bg-paper p-[4mm]">
+              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Datum</div>
+              <div className="mt-1 text-[11pt] font-bold">{plan.date || "—"}</div>
             </div>
           </div>
         </div>
-        <h2 className="mb-3 mt-6 font-display text-[16pt] font-bold">Zeitstrahl</h2>
-        <div className="space-y-[2.5mm]">
-          {plan.phases.map((phase, index) => {
-            const before = plan.phases.slice(0, index).reduce((s, p) => s + Number(p.minutes || 0), 0);
-            return (
-              <div key={phase.id} className="grid grid-cols-[24mm_1fr_21mm] overflow-hidden rounded-[3mm] border border-ink/10">
-                <div className="p-[3mm]" style={{ background: phase.color }}>
-                  <div className="text-[7pt] font-bold uppercase opacity-55">Phase {index + 1}</div>
-                  <div className="mt-1 font-display text-[10pt] font-bold leading-tight">{phase.title}</div>
-                </div>
-                <div className="grid grid-cols-3 gap-[3mm] p-[3mm] text-[7.5pt] leading-snug">
-                  <div><b>Wir-Lernziel</b><br />{phase.goal || "—"}</div>
-                  <div><b>Unterrichtsinhalt</b><br />{phase.content || "—"}</div>
-                  <div>
-                    <b>Methode / Material</b><br />{phase.methods || "—"}
-                    {phase.differentiation === "Ja" && (phase.differentiationDetails.up || phase.differentiationDetails.down) && (
-                      <div className="mt-1 text-[6.5pt] text-ink/60">
-                        <b>Differenzierung:</b>
-                        {phase.differentiationDetails.up && ` ↑ ${phase.differentiationDetails.upHow || "nach oben"}`}
-                        {phase.differentiationDetails.down && ` ↓ ${phase.differentiationDetails.downHow || "nach unten"}`}
-                      </div>
-                    )}
-                  </div>
-                  {index === 0 && <div className="col-span-3 -mt-1 text-[7pt] text-ink/65"><b>Moderation:</b> {phase.moderation || "—"}</div>}
-                </div>
-                <div className="flex flex-col items-center justify-center border-l border-ink/10 bg-paper text-center">
-                  <strong className="text-[10pt]">{phase.minutes}′</strong>
-                  <span className="mt-1 text-[6.5pt] text-ink/50">{addMinutes(plan.startTime, before)}<br />{addMinutes(plan.startTime, before + Number(phase.minutes || 0))}</span>
-                </div>
-              </div>
-            );
-          })}
+        <div className="mt-[6mm] rounded-[5mm] border border-moss/15 bg-sky/10 p-[5mm]">
+          <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Globalziel der Unterrichtseinheit</div>
+          <p className="mt-2 whitespace-pre-wrap text-[12pt] leading-snug">{plan.globalGoal || "—"}</p>
+        </div>
+        <div className={`mt-[5mm] gap-[5mm] rounded-[5mm] border border-ink/10 p-[5mm] ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_52mm]" : ""}`}>
+          <div>
+            <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Situation · berufliche Handlung</div>
+            <p className="mt-2 whitespace-pre-wrap text-[9pt] leading-relaxed text-ink/70">{plan.situationDescription || "—"}</p>
+          </div>
+          {plan.situationImageDataUrl && (
+            <img
+              src={plan.situationImageDataUrl}
+              alt={plan.situationImageName || "Einstiegssituation"}
+              className="h-[38mm] w-[52mm] rounded-[3mm] object-cover"
+            />
+          )}
+        </div>
+        {plan.observationEnabled && plan.observationTask && (
+          <div className="mt-[4mm] rounded-[4mm] border-l-[2mm] border-clay bg-paper px-[4mm] py-[3mm]">
+            <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-clay">Beobachtungsauftrag für Hospitierende</div>
+            <p className="mt-1 whitespace-pre-wrap text-[8.5pt] leading-snug text-ink/70">{plan.observationTask}</p>
+          </div>
+        )}
+        <div className="mt-[5mm] grid grid-cols-[1fr_auto] items-center gap-[5mm]">
+          <div className="rounded-[4mm] border border-ink/10 px-[5mm] py-[4mm]">
+            <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Unterrichtsbeginn</div>
+            <div className="mt-1 font-display text-[16pt] font-bold">{plan.startTime ? `${plan.startTime} Uhr` : "—"}</div>
+          </div>
+          <div className="min-w-[92mm] rounded-[4mm] bg-clay px-[6mm] py-[4mm] text-white">
+            <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-70">Aus den Phasen kalkuliert</div>
+            <div className="mt-1 font-display text-[17pt] font-bold leading-none">
+              {totalMinutes} Minuten · bis {addMinutes(plan.startTime, totalMinutes)}{plan.startTime ? " Uhr" : ""}
+            </div>
+          </div>
         </div>
         <PrintFooter />
       </section>
-      <section className="print-page">
-        <PrintHeader page="02" title="Handlungskompetenz" />
+
+      <section className="print-flow">
+        <div className="print-flow-heading">
+          <PrintHeader page="ab 02" title="Unterrichtsverlauf" />
+          <div className="mt-[7mm]">
+            <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Unterrichtsverlauf</div>
+            <h1 className="mt-1 font-display text-[23pt] font-bold">Unterrichtsverlaufplan</h1>
+            <p className="mt-1 text-[8.5pt] text-ink/50">Die Uhrzeiten ergeben sich fortlaufend aus dem Unterrichtsbeginn und den Zeitangaben der Phasen.</p>
+          </div>
+        </div>
+        <div className="mt-[6mm] space-y-[4mm]">
+          {plan.phases.length === 0 && (
+            <div className="rounded-[5mm] border border-dashed border-ink/20 p-[8mm] text-center text-[10pt] text-ink/45">Noch keine Unterrichtsphasen angelegt.</div>
+          )}
+          {plan.phases.map((phase, index) => {
+            const before = plan.phases.slice(0, index).reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+            const startsAt = addMinutes(plan.startTime, before);
+            const endsAt = addMinutes(plan.startTime, before + Number(phase.minutes || 0));
+            return (
+              <article key={phase.id} className="print-phase-card rounded-[5mm] border border-ink/10 bg-white" style={{ borderLeft: `3mm solid ${phase.color}` }}>
+                <div className="flex items-center justify-between gap-[6mm] bg-paper/60 px-[5mm] py-[3.5mm]">
+                  <div className="min-w-0">
+                    <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-ink/40">Phase {index + 1}</div>
+                    <h2 className="mt-1 font-display text-[15pt] font-bold leading-tight">{phase.title || "Ohne Titel"}</h2>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-display text-[13pt] font-bold">{startsAt}–{endsAt} Uhr</div>
+                    <div className="mt-1 text-[8pt] font-bold text-ink/50">{phase.minutes || 0} Minuten</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-[6mm] gap-y-[4mm] p-[5mm] text-[9pt] leading-relaxed">
+                  <div>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Wir-Lernziel</div>
+                    <p className="mt-1 whitespace-pre-wrap">{phase.goal || "—"}</p>
+                  </div>
+                  <div>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Unterrichtsinhalt</div>
+                    <p className="mt-1 whitespace-pre-wrap">{phase.content || "—"}</p>
+                  </div>
+                  <div>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Methoden & Material</div>
+                    <p className="mt-1 whitespace-pre-wrap">{phase.methods || "—"}</p>
+                  </div>
+                  <div>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Moderation</div>
+                    <p className="mt-1 whitespace-pre-wrap">{phase.moderation || "—"}</p>
+                  </div>
+                  {phase.differentiation === "Ja" && (
+                    <div className="col-span-2 rounded-[3mm] bg-paper px-[4mm] py-[3mm]">
+                      <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-clay">Differenzierung</div>
+                      <div className="mt-1 grid grid-cols-2 gap-[5mm]">
+                        <p><b>Nach oben:</b> {phase.differentiationDetails.up ? phase.differentiationDetails.upHow || "vorgesehen" : "nicht ausgewählt"}</p>
+                        <p><b>Nach unten:</b> {phase.differentiationDetails.down ? phase.differentiationDetails.downHow || "vorgesehen" : "nicht ausgewählt"}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="print-page print-competency-page">
+        <PrintHeader page="Schlussseite" title="Handlungskompetenz" />
         <div className="mt-6">
-          <h1 className="font-display text-[22pt] font-bold">Kompetenzprofil der Stunde</h1>
+          <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Kompetenzprofil</div>
+          <h1 className="mt-1 font-display text-[22pt] font-bold">Kompetenzprofil der Stunde</h1>
           <p className="mt-2 max-w-[155mm] text-[9pt] leading-relaxed text-ink/60">Die Matrix macht sichtbar, welche Facetten beruflicher Handlungskompetenz in den einzelnen Unterrichtsphasen angebahnt werden. Die Tiefe markiert das gewählte Niveau 1–4, die Farben verweisen auf die Phasen.</p>
         </div>
         <div className="mt-5"><CompetencyLandscape phases={plan.phases} compact /></div>
@@ -1029,21 +1150,21 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
 
 function PrintHeader({ page, title }: { page: string; title: string }) {
   return (
-    <div className="flex items-center justify-between rounded-[4mm] border-b-2 border-clay bg-ink px-[4mm] py-[2.5mm] text-white">
+    <div className="flex items-center justify-between border-b border-ink/15 pb-[3mm]">
       <div className="flex items-center gap-[4mm]">
-        <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth" className="h-[9mm] w-auto object-contain" />
+        <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth" className="h-[12mm] w-auto object-contain" />
         <div>
-          <div className="font-display text-[12pt] font-bold uppercase leading-none">Seminar Metalltechnik</div>
-          <div className="mt-1 text-[6pt] font-bold uppercase tracking-[.18em] text-sky">UVP Studio</div>
+          <div className="font-display text-[12pt] font-bold uppercase leading-none text-ink">Seminar Metalltechnik</div>
+          <div className="mt-1 text-[6pt] font-bold uppercase tracking-[.18em] text-moss">UVP Studio</div>
         </div>
       </div>
-      <div className="text-[7pt] font-bold uppercase tracking-[.16em] text-white/60">{title} · {page}</div>
+      <div className="text-right text-[7pt] font-bold uppercase tracking-[.16em] text-ink/45">{title}<br /><span className="text-clay">{page}</span></div>
     </div>
   );
 }
 function PrintFooter() {
   return (
-    <div className="absolute bottom-[8mm] left-[14mm] right-[14mm] flex justify-between gap-5 border-t border-clay/40 pt-2 text-[6.2pt] text-ink/40">
+    <div className="absolute bottom-0 left-0 right-0 flex justify-between gap-5 border-t border-clay/40 pt-2 text-[6.2pt] text-ink/40">
       <span className="font-bold text-moss">Seminar Metalltechnik · UVP Studio</span>
       <span>entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
     </div>
