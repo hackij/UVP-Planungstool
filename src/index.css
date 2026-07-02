@@ -24,7 +24,7 @@ textarea { resize: vertical; }
 
 .timeline-scroll { scrollbar-color: rgba(23,74,135,.38) transparent; scrollbar-width: thin; }
 
-@page { size: A4 portrait; margin: 0; }
+@page { size: A4 portrait; margin: 13mm 14mm 12mm; }
 .print-only { display: none; }
 
 @media print {
@@ -34,12 +34,27 @@ textarea { resize: vertical; }
   .print-only { display: block !important; color: #0c2340; }
   .print-page {
     position: relative;
-    width: 210mm;
-    height: 297mm;
-    padding: 13mm 14mm 12mm;
+    width: 100%;
+    height: 272mm;
+    padding: 0;
     overflow: hidden;
+    break-after: page;
     page-break-after: always;
     background: white;
   }
-  .print-page:last-child { page-break-after: auto; }
+  .print-flow { background: white; }
+  .print-flow-heading {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+  .print-phase-card {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+  .print-competency-page {
+    break-before: page;
+    page-break-before: always;
+    break-after: auto;
+    page-break-after: auto;
+  }
 }
