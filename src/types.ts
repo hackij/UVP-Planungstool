@@ -24,12 +24,14 @@ export interface Phase {
 }
 
 export interface Plan {
+  teacherName: string;
   topic: string;
   className: string;
   situationDescription: string;
   situationImageDataUrl: string;
   situationImageName: string;
   globalGoal: string;
+  learningContent: string;
   observationEnabled: boolean;
   observationTask: string;
   date: string;
