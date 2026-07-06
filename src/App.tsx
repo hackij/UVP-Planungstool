@@ -332,36 +332,36 @@ export default function App() {
           <section className="relative overflow-hidden rounded-[2rem] border border-ink/10 bg-white px-5 py-7 text-ink shadow-soft sm:px-8 lg:px-10 lg:py-9">
             <div className="absolute inset-x-0 top-0 h-1 bg-clay" />
             <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-sky/10" />
-            <div className="relative grid gap-6 lg:grid-cols-[1fr_280px] lg:items-end">
-              <div>
-                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsentwurf</div>
-                <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_210px]">
-                  <label>
+            <div className="relative">
+              <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsentwurf</div>
+              <label className="block max-w-3xl rounded-2xl border border-moss/15 bg-sky/10 px-4 py-3">
+                <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[.14em] text-moss">Name der unterrichtenden Lehrkraft</span>
+                <input
+                  aria-label="Name der unterrichtenden Lehrkraft"
+                  className="w-full bg-transparent text-lg font-bold text-ink outline-none placeholder:text-ink/25"
+                  placeholder="Vor- und Nachname"
+                  value={plan.teacherName}
+                  onChange={(event) => updatePlan("teacherName", event.target.value)}
+                />
+              </label>
+              <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px] lg:items-end">
+                <div>
+                  <label className="mb-5 block">
                     <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Thema / Lernsituation</span>
                     <input
-                      aria-label="Thema der Stunde"
+                      aria-label="Thema / Lernsituation"
                       className="w-full border-0 border-b border-ink/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-ink/25 focus:border-moss sm:text-3xl"
-                      placeholder="Thema der Stunde"
+                      placeholder="Thema oder Titel der Lernsituation"
                       value={plan.topic} onChange={(e) => updatePlan("topic", e.target.value)}
                     />
                   </label>
-                  <label>
-                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Klasse</span>
-                    <input
-                      aria-label="Klasse"
-                      className="w-full border-0 border-b border-ink/15 bg-transparent pb-2 text-lg font-bold outline-none placeholder:text-ink/25 focus:border-moss sm:text-xl"
-                      placeholder="z. B. Bäcker 11"
-                      value={plan.className} onChange={(e) => updatePlan("className", e.target.value)}
-                    />
-                  </label>
-                </div>
                 <div className="mb-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
                   <label className="block">
-                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Situationsbeschreibung · berufliche Handlung</span>
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</span>
                     <textarea
-                      aria-label="Situationsbeschreibung"
+                      aria-label="Berufliche Anforderung"
                       className="min-h-[132px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
-                      placeholder="Welche berufliche Handlung bildet den Ausgangspunkt? Beschreibe Betriebssituation, Auftrag, Problem und Handlungsanlass …"
+                      placeholder="Welche berufliche Anforderung, welcher Auftrag oder welches Problem bildet den Handlungsanlass?"
                       value={plan.situationDescription} onChange={(e) => updatePlan("situationDescription", e.target.value)}
                     />
                   </label>
@@ -429,6 +429,14 @@ export default function App() {
                   placeholder="Die Lernenden können …"
                   value={plan.globalGoal} onChange={(e) => updatePlan("globalGoal", e.target.value)}
                 />
+                <label className="mb-2 mt-5 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Lerninhalte</label>
+                <textarea
+                  aria-label="Lerninhalte"
+                  className="min-h-[104px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss"
+                  placeholder="Welche fachlichen Inhalte, Begriffe, Verfahren oder Zusammenhänge werden erschlossen?"
+                  value={plan.learningContent}
+                  onChange={(event) => updatePlan("learningContent", event.target.value)}
+                />
                 <div className="mt-4 rounded-2xl border border-ink/10 bg-paper/50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -469,6 +477,16 @@ export default function App() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
+                <label className="col-span-2 rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Klasse</span>
+                  <input
+                    aria-label="Klasse"
+                    className="w-full bg-transparent text-base font-bold outline-none placeholder:text-ink/25"
+                    placeholder="z. B. Bäcker 11"
+                    value={plan.className}
+                    onChange={(event) => updatePlan("className", event.target.value)}
+                  />
+                </label>
                 <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
                   <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Datum</span>
                   <input type="date" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.date} onChange={(e) => updatePlan("date", e.target.value)} />
@@ -485,6 +503,7 @@ export default function App() {
                   <span className="text-right font-display text-xl font-bold">{totalMinutes} Min · bis {addMinutes(plan.startTime, totalMinutes)}</span>
                 </div>
               </div>
+            </div>
             </div>
           </section>
 
@@ -1000,10 +1019,14 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
     <div className="print-only">
       <section className="print-page print-cover">
         <PrintHeader page="01" title="Stammdaten" />
-        <div className="mt-[9mm]">
-          <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Unterrichtsplanung</div>
-          <h1 className="mt-2 font-display text-[25pt] font-bold leading-tight">{plan.topic || "Thema der Stunde"}</h1>
-          <div className="mt-[5mm] grid grid-cols-2 gap-[4mm]">
+        <div className="mt-[6mm] rounded-[4mm] border border-moss/15 bg-sky/10 px-[5mm] py-[3mm]">
+          <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Unterrichtende Lehrkraft</div>
+          <div className="mt-1 font-display text-[14pt] font-bold">{plan.teacherName || "—"}</div>
+        </div>
+        <div className="mt-[5mm]">
+          <div className="text-[7pt] font-bold uppercase tracking-[.18em] text-clay">Thema / Lernsituation</div>
+          <h1 className="mt-1 font-display text-[21pt] font-bold leading-tight">{plan.topic || "—"}</h1>
+          <div className="mt-[4mm] grid grid-cols-2 gap-[4mm]">
             <div className="rounded-[4mm] bg-paper p-[4mm]">
               <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Klasse</div>
               <div className="mt-1 text-[11pt] font-bold">{plan.className || "—"}</div>
@@ -1014,37 +1037,43 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             </div>
           </div>
         </div>
-        <div className="mt-[6mm] rounded-[5mm] border border-moss/15 bg-sky/10 p-[5mm]">
-          <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Globalziel der Unterrichtseinheit</div>
-          <p className="mt-2 whitespace-pre-wrap text-[12pt] leading-snug">{plan.globalGoal || "—"}</p>
-        </div>
-        <div className={`mt-[5mm] gap-[5mm] rounded-[5mm] border border-ink/10 p-[5mm] ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_52mm]" : ""}`}>
+        <div className={`mt-[4mm] gap-[5mm] rounded-[4mm] border border-ink/10 p-[4mm] ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_42mm]" : ""}`}>
           <div>
-            <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Situation · berufliche Handlung</div>
-            <p className="mt-2 whitespace-pre-wrap text-[9pt] leading-relaxed text-ink/70">{plan.situationDescription || "—"}</p>
+            <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Berufliche Anforderung</div>
+            <p className="mt-1.5 whitespace-pre-wrap text-[8.5pt] leading-relaxed text-ink/70">{plan.situationDescription || "—"}</p>
           </div>
           {plan.situationImageDataUrl && (
             <img
               src={plan.situationImageDataUrl}
               alt={plan.situationImageName || "Einstiegssituation"}
-              className="h-[38mm] w-[52mm] rounded-[3mm] object-cover"
+              className="h-[30mm] w-[42mm] rounded-[3mm] object-cover"
             />
           )}
         </div>
+        <div className="mt-[4mm] grid grid-cols-2 gap-[4mm]">
+          <div className="rounded-[4mm] border border-moss/15 bg-sky/10 p-[4mm]">
+            <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Globalziel der Unterrichtseinheit</div>
+            <p className="mt-1.5 whitespace-pre-wrap text-[9pt] leading-snug">{plan.globalGoal || "—"}</p>
+          </div>
+          <div className="rounded-[4mm] border border-ink/10 bg-paper/60 p-[4mm]">
+            <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Lerninhalte</div>
+            <p className="mt-1.5 whitespace-pre-wrap text-[8.5pt] leading-snug text-ink/75">{plan.learningContent || "—"}</p>
+          </div>
+        </div>
         {plan.observationEnabled && plan.observationTask && (
-          <div className="mt-[4mm] rounded-[4mm] border-l-[2mm] border-clay bg-paper px-[4mm] py-[3mm]">
+          <div className="mt-[3mm] rounded-[4mm] border-l-[2mm] border-clay bg-paper px-[4mm] py-[2.5mm]">
             <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-clay">Beobachtungsauftrag für Hospitierende</div>
-            <p className="mt-1 whitespace-pre-wrap text-[8.5pt] leading-snug text-ink/70">{plan.observationTask}</p>
+            <p className="mt-1 whitespace-pre-wrap text-[8pt] leading-snug text-ink/70">{plan.observationTask}</p>
           </div>
         )}
-        <div className="mt-[5mm] grid grid-cols-[1fr_auto] items-center gap-[5mm]">
-          <div className="rounded-[4mm] border border-ink/10 px-[5mm] py-[4mm]">
+        <div className="mt-[4mm] grid grid-cols-[1fr_auto] items-center gap-[4mm]">
+          <div className="rounded-[4mm] border border-ink/10 px-[4mm] py-[3mm]">
             <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Unterrichtsbeginn</div>
-            <div className="mt-1 font-display text-[16pt] font-bold">{plan.startTime ? `${plan.startTime} Uhr` : "—"}</div>
+            <div className="mt-1 font-display text-[14pt] font-bold">{plan.startTime ? `${plan.startTime} Uhr` : "—"}</div>
           </div>
-          <div className="min-w-[92mm] rounded-[4mm] bg-clay px-[6mm] py-[4mm] text-white">
+          <div className="min-w-[92mm] rounded-[4mm] bg-clay px-[5mm] py-[3mm] text-white">
             <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-70">Aus den Phasen kalkuliert</div>
-            <div className="mt-1 font-display text-[17pt] font-bold leading-none">
+            <div className="mt-1 font-display text-[15pt] font-bold leading-none">
               {totalMinutes} Minuten · bis {addMinutes(plan.startTime, totalMinutes)}{plan.startTime ? " Uhr" : ""}
             </div>
           </div>

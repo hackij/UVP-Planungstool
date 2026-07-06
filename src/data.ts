@@ -24,12 +24,14 @@ const phase = (title: string, minutes: number, color: string, goal = ""): Phase 
 });
 
 export const initialPlan = (): Plan => ({
+  teacherName: "",
   topic: "",
   className: "",
   situationDescription: "",
   situationImageDataUrl: "",
   situationImageName: "",
   globalGoal: "",
+  learningContent: "",
   observationEnabled: false,
   observationTask: "",
   date: "",
