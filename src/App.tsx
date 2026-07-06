@@ -736,7 +736,7 @@ export default function App() {
           <section className="mb-8 mt-8 overflow-hidden rounded-[2rem] border border-ink/10 bg-white p-5 sm:p-7">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div><div className="label">Gesamtbild</div><h2 className="font-display text-2xl font-bold sm:text-3xl">Handlungskompetenzmatrix</h2></div>
-              <span className="text-xs text-ink/45">nach dem Modell Wissen · Können · Wollen</span>
+              <span className="text-xs text-ink/45">Handlungskompetenzmatrix nach Prof. Dr. Manfred Müller</span>
             </div>
             <CompetencyLandscape phases={plan.phases} />
           </section>
