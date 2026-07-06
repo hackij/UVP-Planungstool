@@ -1078,28 +1078,25 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             </div>
           </div>
         </div>
-        <PrintFooter />
       </section>
 
-      <section className="print-flow">
-        <div className="print-flow-heading">
-          <PrintHeader page="ab 02" title="Unterrichtsverlauf" />
-          <div className="mt-[7mm]">
-            <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Unterrichtsverlauf</div>
-            <h1 className="mt-1 font-display text-[23pt] font-bold">Unterrichtsverlaufplan</h1>
-            <p className="mt-1 text-[8.5pt] text-ink/50">Die Uhrzeiten ergeben sich fortlaufend aus dem Unterrichtsbeginn und den Zeitangaben der Phasen.</p>
+      {plan.phases.length > 0 && (
+        <section className="print-flow">
+          <div className="print-flow-heading">
+            <PrintHeader page="ab 02" title="Unterrichtsverlauf" />
+            <div className="mt-[7mm]">
+              <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Unterrichtsverlauf</div>
+              <h1 className="mt-1 font-display text-[23pt] font-bold">Unterrichtsverlaufplan</h1>
+              <p className="mt-1 text-[8.5pt] text-ink/50">Die Uhrzeiten ergeben sich fortlaufend aus dem Unterrichtsbeginn und den Zeitangaben der Phasen.</p>
+            </div>
           </div>
-        </div>
-        <div className="mt-[6mm] space-y-[4mm]">
-          {plan.phases.length === 0 && (
-            <div className="rounded-[5mm] border border-dashed border-ink/20 p-[8mm] text-center text-[10pt] text-ink/45">Noch keine Unterrichtsphasen angelegt.</div>
-          )}
-          {plan.phases.map((phase, index) => {
-            const before = plan.phases.slice(0, index).reduce((sum, item) => sum + Number(item.minutes || 0), 0);
-            const startsAt = addMinutes(plan.startTime, before);
-            const endsAt = addMinutes(plan.startTime, before + Number(phase.minutes || 0));
-            return (
-              <article key={phase.id} className="print-phase-card rounded-[5mm] border border-ink/10 bg-white" style={{ borderLeft: `3mm solid ${phase.color}` }}>
+          <div className="mt-[6mm] space-y-[4mm]">
+            {plan.phases.map((phase, index) => {
+              const before = plan.phases.slice(0, index).reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+              const startsAt = addMinutes(plan.startTime, before);
+              const endsAt = addMinutes(plan.startTime, before + Number(phase.minutes || 0));
+              return (
+                <article key={phase.id} className={`print-phase-card rounded-[5mm] border border-ink/10 bg-white ${index === 0 ? "print-phase-card-first" : ""}`} style={{ borderLeft: `3mm solid ${phase.color}` }}>
                 <div className="flex items-center justify-between gap-[6mm] bg-paper/60 px-[5mm] py-[3.5mm]">
                   <div className="min-w-0">
                     <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-ink/40">Phase {index + 1}</div>
@@ -1137,11 +1134,12 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                     </div>
                   )}
                 </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="print-page print-competency-page">
         <PrintHeader page="Schlussseite" title="Handlungskompetenz" />
@@ -1179,7 +1177,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
 
 function PrintHeader({ page, title }: { page: string; title: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-ink/15 pb-[3mm]">
+    <div className="print-header flex items-center justify-between border-b border-ink/15 pb-[3mm]">
       <div className="flex items-center gap-[4mm]">
         <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth" className="h-[12mm] w-auto object-contain" />
         <div>
@@ -1193,9 +1191,8 @@ function PrintHeader({ page, title }: { page: string; title: string }) {
 }
 function PrintFooter() {
   return (
-    <div className="absolute bottom-0 left-0 right-0 flex justify-between gap-5 border-t border-clay/40 pt-2 text-[6.2pt] text-ink/40">
-      <span className="font-bold text-moss">Seminar Metalltechnik · UVP Studio</span>
-      <span>entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
+    <div className="print-final-footer border-t border-clay/40 pt-2 text-center text-[6.5pt] text-ink/40">
+      <span>Erstellt mit UVP Studio – entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
     </div>
   );
 }

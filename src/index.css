@@ -35,15 +35,24 @@ textarea { resize: vertical; }
   .print-page {
     position: relative;
     width: 100%;
-    height: 272mm;
+    min-height: 272mm;
+    height: auto;
     padding: 0;
-    overflow: hidden;
-    break-after: page;
-    page-break-after: always;
+    overflow: visible;
     background: white;
   }
-  .print-flow { background: white; }
+  .print-header {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+  .print-flow {
+    background: white;
+    break-before: page;
+    page-break-before: always;
+  }
   .print-flow-heading {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
     break-after: avoid-page;
     page-break-after: avoid;
   }
@@ -51,10 +60,19 @@ textarea { resize: vertical; }
     break-inside: avoid-page;
     page-break-inside: avoid;
   }
+  .print-phase-card-first {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
   .print-competency-page {
+    display: flex;
+    flex-direction: column;
     break-before: page;
     page-break-before: always;
-    break-after: auto;
-    page-break-after: auto;
+  }
+  .print-final-footer {
+    margin-top: auto;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
   }
 }
