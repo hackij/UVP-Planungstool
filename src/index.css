@@ -29,17 +29,19 @@ textarea { resize: vertical; }
 
 @media print {
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body { background: white !important; }
+  html, body, #root, .print-only { background: white !important; }
   .app-shell { display: none !important; }
   .print-only { display: block !important; color: #0c2340; }
   .print-page {
     position: relative;
     width: 100%;
-    min-height: 272mm;
-    height: auto;
     padding: 0;
     overflow: visible;
     background: white;
+  }
+  .print-cover {
+    break-after: page;
+    page-break-after: always;
   }
   .print-header {
     break-inside: avoid-page;
@@ -47,8 +49,6 @@ textarea { resize: vertical; }
   }
   .print-flow {
     background: white;
-    break-before: page;
-    page-break-before: always;
   }
   .print-flow-heading {
     break-inside: avoid-page;
@@ -65,13 +65,15 @@ textarea { resize: vertical; }
     page-break-inside: auto;
   }
   .print-competency-page {
-    display: flex;
-    flex-direction: column;
     break-before: page;
     page-break-before: always;
   }
+  .print-competency-after-cover {
+    break-before: auto;
+    page-break-before: auto;
+  }
   .print-final-footer {
-    margin-top: auto;
+    margin-top: 7mm;
     break-inside: avoid-page;
     page-break-inside: avoid;
   }

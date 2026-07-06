@@ -1015,6 +1015,8 @@ function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; com
 }
 
 function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: number }) {
+  const hasVisibleFlowContent = plan.phases.length > 0;
+
   return (
     <div className="print-only">
       <section className="print-page print-cover">
@@ -1080,7 +1082,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         </div>
       </section>
 
-      {plan.phases.length > 0 && (
+      {hasVisibleFlowContent && (
         <section className="print-flow">
           <div className="print-flow-heading">
             <PrintHeader page="ab 02" title="Unterrichtsverlauf" />
@@ -1141,7 +1143,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         </section>
       )}
 
-      <section className="print-page print-competency-page">
+      <section className={`print-page print-competency-page ${hasVisibleFlowContent ? "" : "print-competency-after-cover"}`}>
         <PrintHeader page="Schlussseite" title="Handlungskompetenz" />
         <div className="mt-6">
           <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Kompetenzprofil</div>
@@ -1149,26 +1151,6 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
           <p className="mt-2 max-w-[155mm] text-[9pt] leading-relaxed text-ink/60">Die Matrix macht sichtbar, welche Facetten beruflicher Handlungskompetenz in den einzelnen Unterrichtsphasen angebahnt werden. Die Tiefe markiert das gewählte Niveau 1–4, die Farben verweisen auf die Phasen.</p>
         </div>
         <div className="mt-5"><CompetencyLandscape phases={plan.phases} compact /></div>
-        <div className="mt-7 grid grid-cols-3 gap-[4mm]">
-          {dimensions.map((dimension, index) => (
-            <div key={dimension.key} className="rounded-[4mm] bg-paper p-[5mm]">
-              <span className="grid h-[8mm] w-[8mm] place-items-center rounded-full bg-ink text-[9pt] font-bold text-sky">0{index + 1}</span>
-              <h3 className="mt-3 font-display text-[14pt] font-bold">{dimension.label}</h3>
-              <p className="mt-2 text-[8pt] leading-relaxed text-ink/60">
-                {dimension.key === "wissen" && "Kenntnisse verstehen, einordnen und als Grundlage für begründetes Handeln nutzen."}
-                {dimension.key === "wollen" && "Motivation, Haltung und Bereitschaft entwickeln, Verantwortung für den Lernprozess zu übernehmen."}
-                {dimension.key === "koennen" && "Fähigkeiten praktisch, methodisch und situationsangemessen einsetzen und weiterentwickeln."}
-              </p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 rounded-[4mm] border border-ink/10 p-[5mm]">
-          <div className="grid grid-cols-4 gap-3 text-[8pt]">
-            <strong>Niveaustufen</strong>
-            <span><b>1</b> reproduzieren</span><span><b>2</b> anwenden</span><span><b>3</b> transferieren</span>
-          </div>
-          <div className="mt-2 grid grid-cols-4 gap-3 text-[8pt]"><span /><span><b>4</b> reflektiert gestalten</span><span className="col-span-2 text-ink/45">0 / leer = in dieser Phase nicht fokussiert</span></div>
-        </div>
         <PrintFooter />
       </section>
     </div>
