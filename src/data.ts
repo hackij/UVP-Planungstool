@@ -14,9 +14,12 @@ const phase = (title: string, minutes: number, color: string, goal = ""): Phase 
   title,
   goal,
   content: "",
+  shortDescription: "",
   methods: "",
   minutes,
   moderation: "",
+  teacherAction: "",
+  studentAction: "",
   differentiation: "Nicht vorgesehen",
   differentiationDetails: { up: false, upHow: "", down: false, downHow: "" },
   competencies: emptyCompetencies(),
@@ -24,6 +27,7 @@ const phase = (title: string, minutes: number, color: string, goal = ""): Phase 
 });
 
 export const initialPlan = (): Plan => ({
+  targetAudience: "students",
   teacherName: "",
   topic: "",
   className: "",
@@ -36,10 +40,32 @@ export const initialPlan = (): Plan => ({
   observationTask: "",
   date: "",
   startTime: "",
+  studentCount: "",
+  lessonDuration: "",
+  organizationNotes: "",
+  curriculumReference: "",
+  annualPlanReference: "",
+  topicPlacement: "",
+  competencyIntentions: "",
+  competencyDemand: "",
+  wkwFocus: "",
+  learningPrerequisites: {
+    priorKnowledge: "",
+    subject: "",
+    language: "",
+    methodological: "",
+    social: "",
+    difficulties: "",
+    consequences: "",
+    compact: "",
+  },
+  didacticConsiderations: "",
+  methodologicalConsiderations: "",
+  contentMindmap: [],
   preparation: { before: "", during: "", after: "" },
   criteriaChecks: {},
   phases: [],
 });
 
 export const phaseTemplate = (index: number): Phase =>
-  phase("Neue Phase", 10, PHASE_COLORS[index % PHASE_COLORS.length], "Wir können …");
+  phase("", 10, PHASE_COLORS[index % PHASE_COLORS.length], "");
