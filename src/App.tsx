@@ -187,6 +187,7 @@ export default function App() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [compactDetailsOpen, setCompactDetailsOpen] = useState(false);
   const [mindmapDraft, setMindmapDraft] = useState("");
+  const [usmOpen, setUsmOpen] = useState(false);
   const [activeUsmItem, setActiveUsmItem] = useState<number | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const situationImageRef = useRef<HTMLInputElement>(null);
@@ -201,7 +202,6 @@ export default function App() {
   const showExtendedBlocks = !isInServiceMode && (isStudentMode || compactDetailsOpen);
   const showMindmap = !isInServiceMode && (isStudentMode || (plan.targetAudience === "ref-beginning" && compactDetailsOpen));
   const showCoreAnalyses = !isInServiceMode;
-  const showUsmModel = !isInServiceMode;
   const showCompactOptionalBlocks = !isInServiceMode && (isAdvancedRefMode || compactDetailsOpen);
 
   useEffect(() => {
@@ -214,11 +214,12 @@ export default function App() {
   }, [plan]);
 
   useEffect(() => {
-    if (!criteriaOpen && !verbCatalogOpen && activeUsmItem == null) return;
+    if (!criteriaOpen && !verbCatalogOpen && !usmOpen && activeUsmItem == null) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setCriteriaOpen(false);
       setVerbCatalogOpen(null);
+      setUsmOpen(false);
       setActiveUsmItem(null);
     };
     const previousOverflow = document.body.style.overflow;
@@ -228,7 +229,7 @@ export default function App() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
     };
-  }, [criteriaOpen, verbCatalogOpen, activeUsmItem]);
+  }, [criteriaOpen, verbCatalogOpen, usmOpen, activeUsmItem]);
 
   const updatePlan = <K extends keyof Plan>(key: K, value: Plan[K]) => setPlan((old) => ({ ...old, [key]: value }));
   const updatePhase = (id: string, patch: Partial<Phase>) =>
@@ -398,6 +399,10 @@ export default function App() {
                 Kriterien
                 {checkedCriteria > 0 && <span className="rounded-full bg-lime px-2 py-0.5 text-[10px] text-ink">{checkedCriteria}/{EXAM_CRITERIA_COUNT}</span>}
               </button>
+              <button className="icon-btn" onClick={() => { setUsmOpen(true); setActiveUsmItem(null); }}>
+                <Grid3X3 size={16} />
+                Unterrichtsstrukturmodell (USM)
+              </button>
               <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Import</button>
               <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON</button>
               <button className="icon-btn border-clay bg-clay text-white hover:border-clay hover:bg-[#8d1920]" onClick={() => window.print()}><FileDown size={16} />PDF exportieren</button>
@@ -420,6 +425,7 @@ export default function App() {
               </label>
               <button className="icon-btn border-clay/25 text-clay" onClick={resetPlan}><RotateCcw size={16} />Planung zurücksetzen</button>
               <button className="icon-btn" onClick={() => { setCriteriaOpen(true); setMobileNav(false); }}><ClipboardCheck size={16} />Prüfungskriterien</button>
+              <button className="icon-btn" onClick={() => { setUsmOpen(true); setActiveUsmItem(null); setMobileNav(false); }}><Grid3X3 size={16} />Unterrichtsstrukturmodell (USM)</button>
               <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Plan importieren</button>
               <button className="icon-btn" onClick={exportJson}><Download size={16} />JSON exportieren</button>
               <button className="icon-btn bg-clay text-white" onClick={() => window.print()}><Printer size={16} />Als PDF drucken</button>
@@ -432,7 +438,7 @@ export default function App() {
           <section className="mb-8 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-soft sm:p-6">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <div className="label">Dein aktueller Planungsstand</div>
+                <div className="label">Aktueller Planungsstand</div>
                 <h1 className="font-display text-2xl font-bold sm:text-3xl">Wo befindest du dich gerade?</h1>
               </div>
               <span className="rounded-full bg-sky/15 px-3 py-1.5 text-xs font-bold text-moss">dauerhaft änderbar</span>
@@ -453,27 +459,57 @@ export default function App() {
             </div>
           </section>
 
-          <section className="relative overflow-hidden rounded-[2rem] border border-ink/10 bg-white px-5 py-7 text-ink shadow-soft sm:px-8 lg:px-10 lg:py-9">
-            <div className="absolute inset-x-0 top-0 h-1 bg-clay" />
-            <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-sky/10" />
-            <RedAccentCurve className="absolute -left-16 top-24 w-[520px] opacity-[.13]" />
-            <RedAccentCurve className="absolute -right-28 bottom-10 w-[420px] rotate-180 opacity-[.08]" />
-            <div className="relative">
-              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsvorbereitung strukturieren</div>
-              <h2 className="font-display text-3xl font-bold">Analysen & Grobplanung</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">{isInServiceMode ? "Kompakte Planung für den Unterrichtsalltag: Ziel klären, Verlauf strukturieren, Zeit im Blick behalten." : "Kläre Rahmenbedingungen, Vorgaben, Kompetenzbedarf, Inhalte und Lernvoraussetzungen. Daraus entsteht anschließend das Unterrichtsgrobkonzept."}</p>
-              {!isInServiceMode && (
-              <label className="mt-6 block max-w-3xl rounded-2xl border border-moss/15 bg-sky/10 px-4 py-3">
-                <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[.14em] text-moss">Name der unterrichtenden Lehrkraft</span>
+          <section className="mb-8 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-soft sm:p-6">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="label">Unterrichtende Lehrkraft</div>
+                <h2 className="font-display text-2xl font-bold">Organisatorische Stammdaten</h2>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Unterrichtende Lehrkraft</span>
                 <input
-                  aria-label="Name der unterrichtenden Lehrkraft"
-                  className="w-full bg-transparent text-lg font-bold text-ink outline-none placeholder:text-ink/25"
+                  aria-label="Unterrichtende Lehrkraft"
+                  className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25"
                   placeholder="Vor- und Nachname"
                   value={plan.teacherName}
                   onChange={(event) => updatePlan("teacherName", event.target.value)}
                 />
               </label>
-              )}
+              <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Klasse</span>
+                <input
+                  aria-label="Klasse"
+                  className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25"
+                  placeholder="z. B. MBM 11"
+                  value={plan.className}
+                  onChange={(event) => updatePlan("className", event.target.value)}
+                />
+              </label>
+              <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Datum</span>
+                <input type="date" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.date} onChange={(event) => updatePlan("date", event.target.value)} />
+              </label>
+              <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Unterrichtsbeginn</span>
+                <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.startTime} onChange={(event) => updatePlan("startTime", event.target.value)} />
+              </label>
+              <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Anzahl der Schülerinnen und Schüler</span>
+                <input className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25" placeholder="z. B. 24" value={plan.studentCount} onChange={(event) => updatePlan("studentCount", event.target.value)} />
+              </label>
+            </div>
+          </section>
+
+          <section className="relative overflow-hidden rounded-[2rem] border border-ink/10 bg-white px-5 py-7 text-ink shadow-soft sm:px-8 lg:px-10 lg:py-9">
+            <div className="absolute inset-x-0 top-0 h-1 bg-clay" />
+            <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-sky/10" />
+            <RedAccentCurve className="absolute -right-14 top-12 w-[330px] opacity-[.045]" />
+            <div className="relative">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsvorbereitung strukturieren</div>
+              <h2 className="font-display text-3xl font-bold">Analysen & Grobplanung</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">{isInServiceMode ? "Kompakte Planung für den Unterrichtsalltag: Ziel klären, Verlauf strukturieren, Zeit im Blick behalten." : "Kläre Rahmenbedingungen, Vorgaben, Kompetenzbedarf, Inhalte und Lernvoraussetzungen. Daraus entsteht anschließend das Unterrichtsgrobkonzept."}</p>
               <div className="mt-6 mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-clay">1 · Allgemeine Rahmenbedingungen klären</div>
               <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px] lg:items-end">
                 <div>
@@ -688,28 +724,6 @@ export default function App() {
               {showCoreAnalyses && (
               <div className="grid grid-cols-2 gap-3">
                 <label className="col-span-2 rounded-2xl border border-ink/10 bg-paper/60 p-4">
-                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Klasse</span>
-                  <input
-                    aria-label="Klasse"
-                    className="w-full bg-transparent text-base font-bold outline-none placeholder:text-ink/25"
-                    placeholder="z. B. Bäcker 11"
-                    value={plan.className}
-                    onChange={(event) => updatePlan("className", event.target.value)}
-                  />
-                </label>
-                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
-                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Datum</span>
-                  <input type="date" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.date} onChange={(e) => updatePlan("date", e.target.value)} />
-                </label>
-                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
-                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Beginn</span>
-                  <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.startTime} onChange={(e) => updatePlan("startTime", e.target.value)} />
-                </label>
-                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
-                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Anzahl SuS</span>
-                  <input className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25" placeholder="z. B. 24" value={plan.studentCount} onChange={(e) => updatePlan("studentCount", e.target.value)} />
-                </label>
-                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
                   <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Zeitlicher Umfang</span>
                   <input className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25" placeholder="z. B. 90 Min" value={plan.lessonDuration} onChange={(e) => updatePlan("lessonDuration", e.target.value)} />
                 </label>
@@ -729,20 +743,6 @@ export default function App() {
             </div>
             </div>
           </section>
-
-          {showUsmModel && (
-            <section className="relative mt-8 overflow-hidden rounded-[2rem] border border-ink/10 bg-white p-5 shadow-soft sm:p-7">
-              <RedAccentCurve className="absolute -right-20 top-8 w-[380px] opacity-[.08]" />
-              <div className="relative mb-5 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <div className="label">Unterrichtsstrukturmodell</div>
-                  <h2 className="font-display text-2xl font-bold sm:text-3xl">USM als Denkraum für Planung und Nachbesprechung</h2>
-                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">Nutze die anklickbaren Ziffern als Brainstorming-Hilfe: Welche Einflussgrößen prägen die Unterrichtsidee, den Lernweg und die spätere Reflexion?</p>
-                </div>
-              </div>
-              <TeachingStructureModel activeId={activeUsmItem} onSelect={setActiveUsmItem} />
-            </section>
-          )}
 
           <section className="mt-8">
             <div className="mb-4 flex items-end justify-between">
@@ -865,9 +865,9 @@ export default function App() {
                   <label className="sm:col-span-2"><span className="label">Kurzbeschreibung der Phase</span><textarea className="field min-h-16" placeholder="Welche Funktion hat diese Phase im Unterrichtsverlauf?" value={selected.shortDescription} onChange={(e) => updatePhase(selected.id, { shortDescription: e.target.value })} /></label>
                   <label className="sm:col-span-2"><span className="label">Kompetenzorientierte Zielformulierung</span><textarea className="field min-h-20" placeholder="Die Lernenden können …" value={selected.goal} onChange={(e) => updatePhase(selected.id, { goal: e.target.value })} /></label>
                   <label className="sm:col-span-2"><span className="label">Unterrichtsinhalt</span><textarea className="field min-h-24" placeholder="Was wird in dieser Phase fachlich thematisiert?" value={selected.content} onChange={(e) => updatePhase(selected.id, { content: e.target.value })} /></label>
-                  <label><span className="label">Methoden & Material</span><textarea className="field min-h-28" placeholder="z. B. Think–Pair–Share, Impulskarte …" value={selected.methods} onChange={(e) => updatePhase(selected.id, { methods: e.target.value })} /></label>
                   <label><span className="label">Lehrhandlung</span><textarea className="field min-h-28" placeholder="Was tut die Lehrkraft? Impulse, Strukturierung, Begleitung …" value={selected.teacherAction} onChange={(e) => updatePhase(selected.id, { teacherAction: e.target.value, moderation: e.target.value })} /></label>
                   <label><span className="label">Lernhandlung</span><textarea className="field min-h-28" placeholder="Was tun die Schülerinnen und Schüler? Denken, handeln, kooperieren …" value={selected.studentAction} onChange={(e) => updatePhase(selected.id, { studentAction: e.target.value })} /></label>
+                  <label className="sm:col-span-2"><span className="label">Methoden & Material</span><textarea className="field min-h-28" placeholder="z. B. Think–Pair–Share, Impulskarte …" value={selected.methods} onChange={(e) => updatePhase(selected.id, { methods: e.target.value })} /></label>
                   <div className="sm:col-span-2">
                     <span className="label">Differenzierung</span>
                     <div className="flex flex-wrap gap-2">
@@ -1024,10 +1024,14 @@ export default function App() {
           onClose={() => setVerbCatalogOpen(null)}
         />
       )}
-      {activeUsmItem != null && (
-        <UsmInfoModal
-          item={USM_ITEMS.find((item) => item.id === activeUsmItem) ?? USM_ITEMS[0]}
-          onClose={() => setActiveUsmItem(null)}
+      {usmOpen && (
+        <UsmModal
+          activeId={activeUsmItem}
+          onSelect={setActiveUsmItem}
+          onClose={() => {
+            setUsmOpen(false);
+            setActiveUsmItem(null);
+          }}
         />
       )}
       <PrintDocument plan={plan} totalMinutes={totalMinutes} />
@@ -1042,8 +1046,9 @@ function RedAccentCurve({ className = "" }: { className?: string }) {
         d="M18 152C134 18 266 34 396 116C482 170 548 174 622 86"
         fill="none"
         stroke="#9f140c"
+        strokeOpacity=".35"
         strokeLinecap="round"
-        strokeWidth="9"
+        strokeWidth="2.5"
       />
     </svg>
   );
@@ -1103,13 +1108,14 @@ function ObservationTaskPanel({
   );
 }
 
-function TeachingStructureModel({ activeId, onSelect }: { activeId: number | null; onSelect: (id: number) => void }) {
+function TeachingStructureModel({ activeId, onSelect }: { activeId: number | null; onSelect: (id: number | null) => void }) {
   const points = [
     { id: 1, x: 50, y: 8 }, { id: 2, x: 50, y: 23 }, { id: 3, x: 50, y: 39 }, { id: 4, x: 50, y: 55 },
     { id: 5, x: 50, y: 72 }, { id: 6, x: 23, y: 79 }, { id: 7, x: 77, y: 79 }, { id: 8, x: 34, y: 90 },
     { id: 9, x: 66, y: 90 }, { id: 10, x: 13, y: 94 }, { id: 11, x: 87, y: 94 },
   ];
   const itemById = new Map(USM_ITEMS.map((item) => [item.id, item]));
+  const activeItem = activeId ? itemById.get(activeId) : null;
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,.9fr)] lg:items-center">
@@ -1159,30 +1165,73 @@ function TeachingStructureModel({ activeId, onSelect }: { activeId: number | nul
         <p className="mt-2 text-sm leading-relaxed text-ink/60">Die Ziffern helfen, Unterrichtsideen systematisch zu prüfen: vom Bildungsanspruch über Ziele und Inhalte bis zu Bedingungen wie Raum, Zeit, Medien und Methoden.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {USM_ITEMS.map((item) => (
-            <button key={item.id} type="button" className="rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-ink/60 transition hover:border-clay hover:text-clay" onClick={() => onSelect(item.id)}>
+            <button
+              key={item.id}
+              type="button"
+              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${activeId === item.id ? "border-clay bg-clay text-white" : "border-ink/10 bg-white text-ink/60 hover:border-clay hover:text-clay"}`}
+              onClick={() => onSelect(item.id)}
+            >
               {item.id}. {item.title}
             </button>
           ))}
         </div>
+        {activeItem && (
+          <div className="mt-5 rounded-2xl border border-clay/15 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[.14em] text-clay">Punkt {activeItem.id}</div>
+                <h4 className="mt-1 font-display text-xl font-bold">{activeItem.title}</h4>
+              </div>
+              <button
+                type="button"
+                aria-label="USM-Erläuterung schließen"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-paper text-ink/45 transition hover:bg-clay/10 hover:text-clay"
+                onClick={() => onSelect(null)}
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-ink/65">{activeItem.description}</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function UsmInfoModal({ item, onClose }: { item: typeof USM_ITEMS[number]; onClose: () => void }) {
+function UsmModal({
+  activeId,
+  onSelect,
+  onClose,
+}: {
+  activeId: number | null;
+  onSelect: (id: number | null) => void;
+  onClose: () => void;
+}) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="usm-title">
-      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-soft">
-        <div className="flex items-start justify-between gap-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 px-4 py-6 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="usm-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-soft">
+        <div className="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4 sm:px-7">
           <div>
-            <div className="label">Unterrichtsstrukturmodell · Punkt {item.id}</div>
-            <h2 id="usm-title" className="font-display text-3xl font-bold">{item.title}</h2>
+            <div className="label">Brainstorming & Nachbesprechung</div>
+            <h2 id="usm-title" className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsstrukturmodell (USM)</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">Nutze die anklickbaren Ziffern als Denkanker, ohne den eigentlichen Unterrichtsverlauf zu verlassen.</p>
           </div>
-          <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="USM-Erläuterung schließen">
+          <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="Unterrichtsstrukturmodell schließen">
             <X size={18} />
           </button>
         </div>
-        <p className="mt-4 text-sm leading-relaxed text-ink/65">{item.description}</p>
+        <div className="overflow-y-auto p-5 sm:p-7">
+          <TeachingStructureModel activeId={activeId} onSelect={onSelect} />
+        </div>
       </div>
     </div>
   );
@@ -1742,10 +1791,6 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                     <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Unterrichtsinhalt</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.content || "—"}</p>
                   </div>
-                  <div className="col-span-2">
-                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Methoden & Material</div>
-                    <p className="mt-1 whitespace-pre-wrap">{phase.methods || "—"}</p>
-                  </div>
                   <div>
                     <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Lehrhandlung</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.teacherAction || phase.moderation || "—"}</p>
@@ -1753,6 +1798,10 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                   <div>
                     <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Lernhandlung</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.studentAction || "—"}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Methoden & Material</div>
+                    <p className="mt-1 whitespace-pre-wrap">{phase.methods || "—"}</p>
                   </div>
                   {phase.differentiation === "Ja" && (
                     <div className="col-span-2 rounded-[3mm] bg-paper px-[4mm] py-[3mm]">
