@@ -1,7 +1,7 @@
 export type CompetencyArea = "fach" | "selbst" | "sozial";
 export type CompetencyDimension = "wissen" | "wollen" | "koennen";
 export type Competencies = Record<CompetencyArea, Record<CompetencyDimension, number>>;
-export type TargetAudience = "students" | "ref-beginning" | "ref-compact";
+export type TargetAudience = "students" | "ref-beginning" | "ref-advanced" | "in-service";
 
 export interface DifferentiationDetails {
   up: boolean;
