@@ -11,6 +11,7 @@ import type { CompetencyArea, CompetencyDimension, MindmapNode, Phase, Plan, Tar
 const STORAGE_KEY = "uvp-studio-plan-v1";
 const SCHOOL_LOGO = "./bs1-logo-hell.png";
 const SEMINAR_LOGO = "./seminar-metalltechnik-logo.png";
+const FOOTER_TEXT = "Erstellt mit UVP Studio – entwickelt von Jan Hacker unter fachlicher Beratung von Prof. Dr. Manfred Müller und Dr. Moritz Dier für die gewerblich-technische Universitätsberufsschule Bayreuth";
 const LEGACY_PHASE_COLORS = new Set([
   "#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb",
   "#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268",
@@ -27,9 +28,24 @@ const landscapeDimensions: { key: CompetencyDimension; label: string }[] = [
   { key: "wissen", label: "A: Wissen" }, { key: "koennen", label: "B: Können" }, { key: "wollen", label: "C: Wollen" },
 ];
 const targetAudienceOptions: { key: TargetAudience; title: string; subtitle: string }[] = [
-  { key: "students", title: "Lehramtsstudierende", subtitle: "Vollständige Analyse- und Grobplanungsfassung" },
-  { key: "ref-beginning", title: "Referendariat am Anfang", subtitle: "Reduziert, aber mit didaktischer Orientierung" },
-  { key: "ref-compact", title: "Referendariat kompakt", subtitle: "Schlanker Planungsmodus mit Pflichtkernen" },
+  { key: "students", title: "Studium", subtitle: "Vollständige Analyse- und Grobplanungsfassung" },
+  { key: "ref-beginning", title: "Am Anfang des Referendariats", subtitle: "Reduziert, aber mit didaktischer Orientierung" },
+  { key: "ref-advanced", title: "Im fortgeschrittenen Referendariat", subtitle: "Schlanker Planungsmodus mit optionaler Vertiefung" },
+  { key: "in-service", title: "Im Dienst", subtitle: "Kompakte Planung für den Unterrichtsalltag" },
+];
+const targetAudienceKeys = targetAudienceOptions.map((option) => option.key);
+const USM_ITEMS = [
+  { id: 1, title: "Mündigkeit", description: "Leitperspektive: Unterricht soll Lernende zu fachlich begründetem, selbstständigem und verantwortlichem Handeln befähigen." },
+  { id: 2, title: "Bildungsgangerfolg", description: "Perspektive auf den Bildungsgang: Wie trägt die Stunde langfristig zum erfolgreichen Lernen und Handeln im Bildungsgang bei?" },
+  { id: 3, title: "Lernergebnisse", description: "Welche beobachtbaren Ergebnisse sollen am Ende sichtbar sein - fachlich, methodisch, sozial oder personal?" },
+  { id: 4, title: "Ziele", description: "Welche kompetenzorientierten Zielsetzungen strukturieren Auswahl, Lernweg und Ergebnissicherung?" },
+  { id: 5, title: "Inhalte / Sache", description: "Welche fachliche Sache steht im Mittelpunkt und wie wird sie didaktisch reduziert, strukturiert und zugänglich gemacht?" },
+  { id: 6, title: "Schüler", description: "Welche Lernvoraussetzungen, Interessen, Erfahrungen und Unterstützungsbedarfe der Lernenden sind für die Planung relevant?" },
+  { id: 7, title: "Lehrer", description: "Welche Rolle, Impulse, Diagnose- und Unterstützungsleistungen übernimmt die Lehrkraft im Lernprozess?" },
+  { id: 8, title: "Medien", description: "Welche Medien, Werkzeuge, Materialien oder digitalen Hilfen unterstützen Verstehen, Handeln und Sicherung?" },
+  { id: 9, title: "Methoden", description: "Welche Lern- und Arbeitsformen passen zur beruflichen Handlung, zum Ziel und zur Lerngruppe?" },
+  { id: 10, title: "Raum", description: "Welche räumlichen Bedingungen, Arbeitsplätze oder Lernorte beeinflussen den Unterricht?" },
+  { id: 11, title: "Zeit", description: "Wie werden Lernzeit, Phasen, Taktung und Übergänge so geplant, dass Lernen möglich bleibt?" },
 ];
 
 const addMinutes = (time: string, minutes: number) => {
@@ -114,7 +130,11 @@ const normalizePlan = (candidate: unknown): Plan => {
   return {
     ...fallback,
     ...partial,
-    targetAudience: (["students", "ref-beginning", "ref-compact"] as const).includes(partial.targetAudience as TargetAudience) ? partial.targetAudience as TargetAudience : fallback.targetAudience,
+    targetAudience: (partial as { targetAudience?: string }).targetAudience === "ref-compact"
+      ? "ref-advanced"
+      : targetAudienceKeys.includes(partial.targetAudience as TargetAudience)
+        ? partial.targetAudience as TargetAudience
+        : fallback.targetAudience,
     learningPrerequisites: { ...fallback.learningPrerequisites, ...(partial.learningPrerequisites ?? {}) },
     contentMindmap: Array.isArray(partial.contentMindmap) ? partial.contentMindmap.map((node, index) => ({
       id: typeof node.id === "string" && node.id ? node.id : crypto.randomUUID(),
@@ -167,6 +187,7 @@ export default function App() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [compactDetailsOpen, setCompactDetailsOpen] = useState(false);
   const [mindmapDraft, setMindmapDraft] = useState("");
+  const [activeUsmItem, setActiveUsmItem] = useState<number | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const situationImageRef = useRef<HTMLInputElement>(null);
 
@@ -174,9 +195,14 @@ export default function App() {
   const checkedCriteria = useMemo(() => Object.values(plan.criteriaChecks).filter(Boolean).length, [plan.criteriaChecks]);
   const selected = plan.phases.find((p) => p.id === selectedId) ?? plan.phases[0];
   const isStudentMode = plan.targetAudience === "students";
-  const isCompactMode = plan.targetAudience === "ref-compact";
-  const showExtendedBlocks = isStudentMode || compactDetailsOpen;
-  const showMindmap = isStudentMode || (plan.targetAudience === "ref-beginning" && compactDetailsOpen);
+  const isInServiceMode = plan.targetAudience === "in-service";
+  const isAdvancedRefMode = plan.targetAudience === "ref-advanced";
+  const showObservationTask = !isStudentMode;
+  const showExtendedBlocks = !isInServiceMode && (isStudentMode || compactDetailsOpen);
+  const showMindmap = !isInServiceMode && (isStudentMode || (plan.targetAudience === "ref-beginning" && compactDetailsOpen));
+  const showCoreAnalyses = !isInServiceMode;
+  const showUsmModel = !isInServiceMode;
+  const showCompactOptionalBlocks = !isInServiceMode && (isAdvancedRefMode || compactDetailsOpen);
 
   useEffect(() => {
     setSaved(false);
@@ -188,11 +214,12 @@ export default function App() {
   }, [plan]);
 
   useEffect(() => {
-    if (!criteriaOpen && !verbCatalogOpen) return;
+    if (!criteriaOpen && !verbCatalogOpen && activeUsmItem == null) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setCriteriaOpen(false);
       setVerbCatalogOpen(null);
+      setActiveUsmItem(null);
     };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -201,7 +228,7 @@ export default function App() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
     };
-  }, [criteriaOpen, verbCatalogOpen]);
+  }, [criteriaOpen, verbCatalogOpen, activeUsmItem]);
 
   const updatePlan = <K extends keyof Plan>(key: K, value: Plan[K]) => setPlan((old) => ({ ...old, [key]: value }));
   const updatePhase = (id: string, patch: Partial<Phase>) =>
@@ -324,6 +351,7 @@ export default function App() {
     setSelectedId("");
     setCriteriaOpen(false);
     setVerbCatalogOpen(null);
+    setActiveUsmItem(null);
     setMobileNav(false);
     setImageError("");
     setCompactDetailsOpen(false);
@@ -339,17 +367,19 @@ export default function App() {
             <div className="flex min-w-0 items-center gap-3 sm:gap-5">
               <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth und Technikerschule" className="h-11 w-auto max-w-[138px] shrink-0 object-contain sm:h-14 sm:max-w-[180px]" />
               <div className="min-w-0 border-l border-ink/10 pl-3 sm:pl-5">
-                <img
-                  src={SEMINAR_LOGO}
-                  alt="Seminar Metalltechnik"
-                  className="h-10 w-auto max-w-[145px] object-contain object-left sm:h-14 sm:max-w-[210px]"
-                />
-                <div className="mt-1 text-[9px] font-bold uppercase tracking-[.2em] text-moss sm:text-[10px]">UVP Studio · Vom Ziel zur Stunde</div>
+                <div className="flex min-w-0 items-center gap-3">
+                  <img
+                    src={SEMINAR_LOGO}
+                    alt="Seminar Metalltechnik"
+                    className="h-10 w-auto max-w-[145px] object-contain object-left sm:h-14 sm:max-w-[210px]"
+                  />
+                  <div className="shrink-0 border-l border-clay/25 pl-3 font-display text-base font-bold uppercase leading-none text-moss sm:text-xl">UVP Studio</div>
+                </div>
               </div>
             </div>
             <div className="hidden items-center gap-2 xl:flex">
               <label className="mr-1 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper px-3 py-2 text-xs font-bold text-ink/60">
-                Zielgruppe
+                Planungsstand
                 <select
                   className="bg-transparent text-xs font-bold text-ink outline-none"
                   value={plan.targetAudience}
@@ -379,7 +409,7 @@ export default function App() {
           {mobileNav && (
             <div className="grid gap-2 border-t border-ink/10 bg-white p-4 xl:hidden">
               <label className="rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-xs font-bold uppercase tracking-[.12em] text-ink/45">
-                Zielgruppe
+                Planungsstand
                 <select
                   className="mt-2 w-full bg-transparent text-sm font-bold normal-case tracking-normal text-ink outline-none"
                   value={plan.targetAudience}
@@ -402,12 +432,12 @@ export default function App() {
           <section className="mb-8 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-soft sm:p-6">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <div className="label">Zielgruppenmodus</div>
-                <h1 className="font-display text-2xl font-bold sm:text-3xl">Für wen planst du diese Unterrichtseinheit?</h1>
+                <div className="label">Dein aktueller Planungsstand</div>
+                <h1 className="font-display text-2xl font-bold sm:text-3xl">Wo befindest du dich gerade?</h1>
               </div>
               <span className="rounded-full bg-sky/15 px-3 py-1.5 text-xs font-bold text-moss">dauerhaft änderbar</span>
             </div>
-            <div className="grid gap-3 lg:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-4">
               {targetAudienceOptions.map((option) => (
                 <button
                   key={option.key}
@@ -426,12 +456,14 @@ export default function App() {
           <section className="relative overflow-hidden rounded-[2rem] border border-ink/10 bg-white px-5 py-7 text-ink shadow-soft sm:px-8 lg:px-10 lg:py-9">
             <div className="absolute inset-x-0 top-0 h-1 bg-clay" />
             <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-sky/10" />
+            <RedAccentCurve className="absolute -left-16 top-24 w-[520px] opacity-[.13]" />
+            <RedAccentCurve className="absolute -right-28 bottom-10 w-[420px] rotate-180 opacity-[.08]" />
             <div className="relative">
-              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsvorbereitung nach Müller/Dier</div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsvorbereitung strukturieren</div>
               <h2 className="font-display text-3xl font-bold">Analysen & Grobplanung</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">Kläre Rahmenbedingungen, Vorgaben, Kompetenzbedarf, Inhalte und Lernvoraussetzungen. Daraus entsteht anschließend das Unterrichtsgrobkonzept.</p>
-              <div className="mt-6 mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-clay">1 · Allgemeine Rahmenbedingungen klären</div>
-              <label className="block max-w-3xl rounded-2xl border border-moss/15 bg-sky/10 px-4 py-3">
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">{isInServiceMode ? "Kompakte Planung für den Unterrichtsalltag: Ziel klären, Verlauf strukturieren, Zeit im Blick behalten." : "Kläre Rahmenbedingungen, Vorgaben, Kompetenzbedarf, Inhalte und Lernvoraussetzungen. Daraus entsteht anschließend das Unterrichtsgrobkonzept."}</p>
+              {!isInServiceMode && (
+              <label className="mt-6 block max-w-3xl rounded-2xl border border-moss/15 bg-sky/10 px-4 py-3">
                 <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[.14em] text-moss">Name der unterrichtenden Lehrkraft</span>
                 <input
                   aria-label="Name der unterrichtenden Lehrkraft"
@@ -441,6 +473,8 @@ export default function App() {
                   onChange={(event) => updatePlan("teacherName", event.target.value)}
                 />
               </label>
+              )}
+              <div className="mt-6 mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-clay">1 · Allgemeine Rahmenbedingungen klären</div>
               <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px] lg:items-end">
                 <div>
                   <label className="mb-5 block">
@@ -452,6 +486,7 @@ export default function App() {
                       value={plan.topic} onChange={(e) => updatePlan("topic", e.target.value)}
                     />
                   </label>
+                {showCoreAnalyses && (
                 <div className="mb-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
                   <label className="block">
                     <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</span>
@@ -519,7 +554,8 @@ export default function App() {
                     {imageError && <p className="mt-2 text-[10px] font-semibold leading-snug text-clay">{imageError}</p>}
                   </div>
                 </div>
-                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-clay">2 · Direkte Vorgaben und Ressourcen berücksichtigen</div>
+                )}
+                {showCoreAnalyses && <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-clay">2 · Direkte Vorgaben und Ressourcen berücksichtigen</div>}
                 {showExtendedBlocks && (
                   <div className="mb-5 grid gap-4 sm:grid-cols-3">
                     <label className="block">
@@ -543,15 +579,19 @@ export default function App() {
                   placeholder="Die Lernenden können …"
                   value={plan.globalGoal} onChange={(e) => updatePlan("globalGoal", e.target.value)}
                 />
-                <label className="mb-2 mt-5 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Lerninhalte</label>
-                <textarea
-                  aria-label="Lerninhalte"
-                  className="min-h-[104px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss"
-                  placeholder="Welche fachlichen Inhalte, Begriffe, Verfahren oder Zusammenhänge werden erschlossen?"
-                  value={plan.learningContent}
-                  onChange={(event) => updatePlan("learningContent", event.target.value)}
-                />
-                {(plan.targetAudience !== "ref-compact" || compactDetailsOpen) && (
+                {showCoreAnalyses && (
+                  <>
+                    <label className="mb-2 mt-5 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Lerninhalte</label>
+                    <textarea
+                      aria-label="Lerninhalte"
+                      className="min-h-[104px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss"
+                      placeholder="Welche fachlichen Inhalte, Begriffe, Verfahren oder Zusammenhänge werden erschlossen?"
+                      value={plan.learningContent}
+                      onChange={(event) => updatePlan("learningContent", event.target.value)}
+                    />
+                  </>
+                )}
+                {showCompactOptionalBlocks && (
                 <div className="mt-5 grid gap-4">
                   <div className="rounded-2xl border border-ink/10 bg-paper/50 p-4">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -573,7 +613,7 @@ export default function App() {
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <div className="text-xs font-bold uppercase tracking-[.16em] text-clay">4 · Inhalte analysieren, strukturieren und auswählen</div>
-                        <p className="mt-1 text-xs leading-relaxed text-ink/50">{showMindmap ? "Ordne zentrale Begriffe frei auf der Arbeitsfläche an." : "Die Mindmap ist in diesem Zielgruppenmodus ausgeblendet und kann optional geöffnet werden."}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-ink/50">{showMindmap ? "Ordne zentrale Begriffe frei auf der Arbeitsfläche an." : "Die Mindmap ist in diesem Planungsstand ausgeblendet und kann optional geöffnet werden."}</p>
                       </div>
                       {!isStudentMode && (
                         <button type="button" className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/55 transition hover:text-ink" onClick={() => setCompactDetailsOpen(!compactDetailsOpen)}>
@@ -595,59 +635,22 @@ export default function App() {
                   )}
                 </div>
                 )}
-                <div className="mt-4 rounded-2xl border border-ink/10 bg-paper/50 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[.14em] text-moss">Beobachtungsauftrag</div>
-                      <p className="mt-1 text-xs text-ink/55">Ich möchte den Hospitierenden einen Beobachtungsauftrag geben.</p>
-                    </div>
-                    <div className="flex rounded-full bg-ink/5 p-1" aria-label="Beobachtungsauftrag auswählen">
-                      <button
-                        type="button"
-                        aria-pressed={plan.observationEnabled}
-                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${plan.observationEnabled ? "bg-clay text-white" : "text-ink/45 hover:text-ink"}`}
-                        onClick={() => updatePlan("observationEnabled", true)}
-                      >
-                        Ja
-                      </button>
-                      <button
-                        type="button"
-                        aria-pressed={!plan.observationEnabled}
-                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${!plan.observationEnabled ? "bg-white text-ink shadow-sm" : "text-ink/45 hover:text-ink"}`}
-                        onClick={() => updatePlan("observationEnabled", false)}
-                      >
-                        Nein
-                      </button>
-                    </div>
-                  </div>
-                  {plan.observationEnabled && (
-                    <label className="mt-4 block">
-                      <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Beobachtungsauftrag formulieren</span>
-                      <textarea
-                        aria-label="Beobachtungsauftrag formulieren"
-                        className="min-h-24 w-full rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss"
-                        placeholder="Beobachtet bitte besonders, wie …"
-                        value={plan.observationTask}
-                        onChange={(event) => updatePlan("observationTask", event.target.value)}
-                      />
-                    </label>
-                  )}
-                </div>
+                {showCoreAnalyses && (
                 <div className="mt-5 rounded-2xl border border-ink/10 bg-white p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <div className="text-xs font-bold uppercase tracking-[.16em] text-clay">5 · Lernvoraussetzungen erfassen und analysieren</div>
                       <p className="mt-1 text-xs leading-relaxed text-ink/50">
-                        {isCompactMode ? "In der kompakten Ansicht optional einklappbar." : "Was bringen die Lernenden fachlich, sprachlich, methodisch und sozial mit?"}
+                        {isAdvancedRefMode ? "In der fortgeschrittenen Referendariatsansicht optional einklappbar." : "Was bringen die Lernenden fachlich, sprachlich, methodisch und sozial mit?"}
                       </p>
                     </div>
-                    {isCompactMode && (
+                    {isAdvancedRefMode && (
                       <button type="button" className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/55 transition hover:text-ink" onClick={() => setCompactDetailsOpen(!compactDetailsOpen)}>
                         {compactDetailsOpen ? "Ausblenden" : "Einblenden"}
                       </button>
                     )}
                   </div>
-                  {isCompactMode && !compactDetailsOpen ? (
+                  {isAdvancedRefMode && !compactDetailsOpen ? (
                     <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-ink/50">Dieser Analyseblock ist im kompakten Modus eingeklappt. Bei Bedarf kannst du ihn einblenden.</div>
                   ) : (
                     <div className={`grid gap-3 ${isStudentMode ? "md:grid-cols-2" : ""}`}>
@@ -667,6 +670,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
+                )}
 
                 {(showExtendedBlocks || plan.targetAudience === "ref-beginning") && (
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -681,6 +685,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              {showCoreAnalyses && (
               <div className="grid grid-cols-2 gap-3">
                 <label className="col-span-2 rounded-2xl border border-ink/10 bg-paper/60 p-4">
                   <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Klasse</span>
@@ -720,9 +725,24 @@ export default function App() {
                   <span className="text-right font-display text-xl font-bold">{totalMinutes} Min · bis {addMinutes(plan.startTime, totalMinutes)}</span>
                 </div>
               </div>
+              )}
             </div>
             </div>
           </section>
+
+          {showUsmModel && (
+            <section className="relative mt-8 overflow-hidden rounded-[2rem] border border-ink/10 bg-white p-5 shadow-soft sm:p-7">
+              <RedAccentCurve className="absolute -right-20 top-8 w-[380px] opacity-[.08]" />
+              <div className="relative mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="label">Unterrichtsstrukturmodell</div>
+                  <h2 className="font-display text-2xl font-bold sm:text-3xl">USM als Denkraum für Planung und Nachbesprechung</h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">Nutze die anklickbaren Ziffern als Brainstorming-Hilfe: Welche Einflussgrößen prägen die Unterrichtsidee, den Lernweg und die spätere Reflexion?</p>
+                </div>
+              </div>
+              <TeachingStructureModel activeId={activeUsmItem} onSelect={setActiveUsmItem} />
+            </section>
+          )}
 
           <section className="mt-8">
             <div className="mb-4 flex items-end justify-between">
@@ -827,7 +847,7 @@ export default function App() {
           </section>
 
           {selected && (
-            <section className="mt-3 grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,.75fr)]">
+            <section className={`mt-3 grid gap-5 ${isInServiceMode ? "" : "xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,.75fr)]"}`}>
               <div className="card p-5 sm:p-7">
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
@@ -906,6 +926,7 @@ export default function App() {
                 </div>
               </div>
 
+              {!isInServiceMode && (
               <div className="card overflow-hidden">
                 <button className="flex w-full items-center justify-between p-5 text-left sm:p-7" onClick={() => setMatrixOpen(!matrixOpen)}>
                   <div><div className="label !mb-1">Kompetenzprofil</div><h3 className="font-display text-2xl font-bold">Wissen · Wollen · Können</h3></div>
@@ -959,9 +980,20 @@ export default function App() {
                   </div>
                 )}
               </div>
+              )}
             </section>
           )}
 
+          {showObservationTask && (
+            <ObservationTaskPanel
+              enabled={plan.observationEnabled}
+              task={plan.observationTask}
+              onEnabledChange={(value) => updatePlan("observationEnabled", value)}
+              onTaskChange={(value) => updatePlan("observationTask", value)}
+            />
+          )}
+
+          {!isInServiceMode && (
           <section className="mb-8 mt-8 overflow-hidden rounded-[2rem] border border-ink/10 bg-white p-5 sm:p-7">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div><div className="label">Gesamtbild</div><h2 className="font-display text-2xl font-bold sm:text-3xl">Handlungskompetenzmatrix</h2></div>
@@ -969,11 +1001,12 @@ export default function App() {
             </div>
             <CompetencyLandscape phases={plan.phases} />
           </section>
+          )}
         </main>
         <footer className="border-t border-ink/10 bg-white px-4 py-6 text-ink sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-[1540px] flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
             <span className="font-display text-sm font-bold uppercase tracking-wide text-moss">Seminar Metalltechnik · UVP Studio</span>
-            <span className="text-ink/45">entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
+            <span className="max-w-4xl text-ink/45">{FOOTER_TEXT}</span>
           </div>
         </footer>
       </div>
@@ -991,8 +1024,167 @@ export default function App() {
           onClose={() => setVerbCatalogOpen(null)}
         />
       )}
+      {activeUsmItem != null && (
+        <UsmInfoModal
+          item={USM_ITEMS.find((item) => item.id === activeUsmItem) ?? USM_ITEMS[0]}
+          onClose={() => setActiveUsmItem(null)}
+        />
+      )}
       <PrintDocument plan={plan} totalMinutes={totalMinutes} />
     </>
+  );
+}
+
+function RedAccentCurve({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`pointer-events-none ${className}`} viewBox="0 0 640 220" aria-hidden="true">
+      <path
+        d="M18 152C134 18 266 34 396 116C482 170 548 174 622 86"
+        fill="none"
+        stroke="#9f140c"
+        strokeLinecap="round"
+        strokeWidth="9"
+      />
+    </svg>
+  );
+}
+
+function ObservationTaskPanel({
+  enabled,
+  task,
+  onEnabledChange,
+  onTaskChange,
+}: {
+  enabled: boolean;
+  task: string;
+  onEnabledChange: (value: boolean) => void;
+  onTaskChange: (value: string) => void;
+}) {
+  return (
+    <section className="mt-8 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-soft sm:p-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="label">Nach dem Unterrichtsverlaufplan</div>
+          <h2 className="font-display text-2xl font-bold">Beobachtungsauftrag</h2>
+          <p className="mt-1 text-sm leading-relaxed text-ink/50">Optionaler Fokus für Hospitation, Zielgespräch oder Unterrichtsnachbesprechung.</p>
+        </div>
+        <div className="flex rounded-full bg-ink/5 p-1" aria-label="Beobachtungsauftrag auswählen">
+          <button
+            type="button"
+            aria-pressed={enabled}
+            className={`rounded-full px-4 py-2 text-xs font-bold transition ${enabled ? "bg-clay text-white" : "text-ink/45 hover:text-ink"}`}
+            onClick={() => onEnabledChange(true)}
+          >
+            Ja
+          </button>
+          <button
+            type="button"
+            aria-pressed={!enabled}
+            className={`rounded-full px-4 py-2 text-xs font-bold transition ${!enabled ? "bg-white text-ink shadow-sm" : "text-ink/45 hover:text-ink"}`}
+            onClick={() => onEnabledChange(false)}
+          >
+            Nein
+          </button>
+        </div>
+      </div>
+      {enabled && (
+        <label className="mt-5 block">
+          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Beobachtungsauftrag formulieren</span>
+          <textarea
+            aria-label="Beobachtungsauftrag formulieren"
+            className="min-h-24 w-full rounded-xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss"
+            placeholder="Beobachtet bitte besonders, wie …"
+            value={task}
+            onChange={(event) => onTaskChange(event.target.value)}
+          />
+        </label>
+      )}
+    </section>
+  );
+}
+
+function TeachingStructureModel({ activeId, onSelect }: { activeId: number | null; onSelect: (id: number) => void }) {
+  const points = [
+    { id: 1, x: 50, y: 8 }, { id: 2, x: 50, y: 23 }, { id: 3, x: 50, y: 39 }, { id: 4, x: 50, y: 55 },
+    { id: 5, x: 50, y: 72 }, { id: 6, x: 23, y: 79 }, { id: 7, x: 77, y: 79 }, { id: 8, x: 34, y: 90 },
+    { id: 9, x: 66, y: 90 }, { id: 10, x: 13, y: 94 }, { id: 11, x: 87, y: 94 },
+  ];
+  const itemById = new Map(USM_ITEMS.map((item) => [item.id, item]));
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,.9fr)] lg:items-center">
+      <div className="rounded-[2rem] border border-ink/10 bg-paper/50 p-4">
+        <div className="relative mx-auto aspect-[1.18/1] max-w-[620px]">
+          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 86" aria-hidden="true">
+            <path d="M50 4 96 82H4Z" fill="#ffffff" stroke="#174a87" strokeOpacity=".25" strokeWidth="1.2" />
+            <path d="M50 4 50 82" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
+            <path d="M22 72H78" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
+            <path d="M35 50H65" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
+            <path d="M43 30H57" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
+            <path d="M8 78C27 50 46 42 69 57C82 66 90 64 96 52" fill="none" stroke="#9f140c" strokeOpacity=".18" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+          <div className="absolute left-1/2 top-[3%] -translate-x-1/2 text-center">
+            <div className="font-display text-lg font-bold text-ink">Mündigkeit</div>
+          </div>
+          <div className="absolute left-1/2 top-[20%] -translate-x-1/2 text-center text-sm font-bold text-ink/70">Bildungsgangerfolg</div>
+          <div className="absolute left-1/2 top-[36%] -translate-x-1/2 text-center text-sm font-bold text-ink/70">Lernergebnisse</div>
+          <div className="absolute left-1/2 top-[52%] -translate-x-1/2 text-center text-sm font-bold text-ink/70">Ziele</div>
+          <div className="absolute left-1/2 top-[68%] -translate-x-1/2 text-center font-display text-xl font-bold text-moss">Inhalte / Sache</div>
+          <div className="absolute left-[14%] top-[76%] font-bold text-ink/70">Schüler</div>
+          <div className="absolute right-[15%] top-[76%] font-bold text-ink/70">Lehrer</div>
+          <div className="absolute left-[27%] top-[88%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Medien</div>
+          <div className="absolute right-[26%] top-[88%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Methoden</div>
+          <div className="absolute bottom-[1%] left-[5%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Raum</div>
+          <div className="absolute bottom-[1%] right-[6%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Zeit</div>
+          {points.map((point) => {
+            const item = itemById.get(point.id);
+            return (
+              <button
+                key={point.id}
+                type="button"
+                aria-label={`${point.id}: ${item?.title ?? "USM-Bereich"} öffnen`}
+                className={`absolute grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border text-xs font-black shadow-sm transition focus:outline-none focus:ring-2 focus:ring-clay/30 ${activeId === point.id ? "border-clay bg-clay text-white" : "border-white bg-ink text-white hover:bg-clay"}`}
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                onClick={() => onSelect(point.id)}
+              >
+                {point.id}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="rounded-[2rem] border border-ink/10 bg-sky/10 p-5">
+        <div className="label">Anwendung</div>
+        <h3 className="font-display text-2xl font-bold">Planung und Nachbesprechung</h3>
+        <p className="mt-2 text-sm leading-relaxed text-ink/60">Die Ziffern helfen, Unterrichtsideen systematisch zu prüfen: vom Bildungsanspruch über Ziele und Inhalte bis zu Bedingungen wie Raum, Zeit, Medien und Methoden.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {USM_ITEMS.map((item) => (
+            <button key={item.id} type="button" className="rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-ink/60 transition hover:border-clay hover:text-clay" onClick={() => onSelect(item.id)}>
+              {item.id}. {item.title}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UsmInfoModal({ item, onClose }: { item: typeof USM_ITEMS[number]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="usm-title">
+      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-soft">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="label">Unterrichtsstrukturmodell · Punkt {item.id}</div>
+            <h2 id="usm-title" className="font-display text-3xl font-bold">{item.title}</h2>
+          </div>
+          <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="USM-Erläuterung schließen">
+            <X size={18} />
+          </button>
+        </div>
+        <p className="mt-4 text-sm leading-relaxed text-ink/65">{item.description}</p>
+      </div>
+    </div>
   );
 }
 
@@ -1340,8 +1532,10 @@ function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; com
 
 function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: number }) {
   const hasVisibleFlowContent = plan.phases.length > 0;
-  const audience = targetAudienceOptions.find((option) => option.key === plan.targetAudience)?.title ?? "Lehramtsstudierende";
-  const detailedPdf = plan.targetAudience !== "ref-compact";
+  const audience = targetAudienceOptions.find((option) => option.key === plan.targetAudience)?.title ?? "Studium";
+  const detailedPdf = plan.targetAudience === "students" || plan.targetAudience === "ref-beginning";
+  const isInServicePdf = plan.targetAudience === "in-service";
+  const showPdfObservation = plan.targetAudience !== "students" && plan.observationEnabled && plan.observationTask.trim();
   const hasAnalysisContent = detailedPdf && [
     plan.curriculumReference,
     plan.annualPlanReference,
@@ -1391,6 +1585,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             </div>
           </div>
         </div>
+        {!isInServicePdf && (
         <div className={`mt-[4mm] gap-[5mm] rounded-[4mm] border border-ink/10 p-[4mm] ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_42mm]" : ""}`}>
           <div>
             <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Berufliche Anforderung</div>
@@ -1404,22 +1599,19 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             />
           )}
         </div>
+        )}
         <div className="mt-[4mm] grid grid-cols-2 gap-[4mm]">
-          <div className="rounded-[4mm] border border-moss/15 bg-sky/10 p-[4mm]">
+          <div className={`${isInServicePdf ? "col-span-2" : ""} rounded-[4mm] border border-moss/15 bg-sky/10 p-[4mm]`}>
             <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Globalziel der Unterrichtseinheit</div>
             <p className="mt-1.5 whitespace-pre-wrap text-[9pt] leading-snug">{plan.globalGoal || "—"}</p>
           </div>
+          {!isInServicePdf && (
           <div className="rounded-[4mm] border border-ink/10 bg-paper/60 p-[4mm]">
             <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Lerninhalte</div>
             <p className="mt-1.5 whitespace-pre-wrap text-[8.5pt] leading-snug text-ink/75">{plan.learningContent || "—"}</p>
           </div>
+          )}
         </div>
-        {plan.observationEnabled && plan.observationTask && (
-          <div className="mt-[3mm] rounded-[4mm] border-l-[2mm] border-clay bg-paper px-[4mm] py-[2.5mm]">
-            <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-clay">Beobachtungsauftrag für Hospitierende</div>
-            <p className="mt-1 whitespace-pre-wrap text-[8pt] leading-snug text-ink/70">{plan.observationTask}</p>
-          </div>
-        )}
         <div className="mt-[4mm] grid grid-cols-[1fr_auto] items-center gap-[4mm]">
           <div className="rounded-[4mm] border border-ink/10 px-[4mm] py-[3mm]">
             <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Unterrichtsbeginn</div>
@@ -1433,7 +1625,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             </div>
           </div>
         </div>
-        {plan.organizationNotes && (
+        {!isInServicePdf && plan.organizationNotes && (
           <div className="mt-[3mm] rounded-[4mm] border border-ink/10 bg-white px-[4mm] py-[2.5mm]">
             <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Weitere organisatorische Rahmenbedingungen</div>
             <p className="mt-1 whitespace-pre-wrap text-[8pt] leading-snug text-ink/65">{plan.organizationNotes}</p>
@@ -1579,6 +1771,15 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
         </section>
       )}
 
+      {showPdfObservation && (
+        <section className="print-flow">
+          <div className="mt-[6mm] rounded-[4mm] border-l-[2mm] border-clay bg-paper px-[4mm] py-[3mm]">
+            <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-clay">Beobachtungsauftrag für Hospitierende</div>
+            <p className="mt-1 whitespace-pre-wrap text-[8.5pt] leading-snug text-ink/70">{plan.observationTask}</p>
+          </div>
+        </section>
+      )}
+
       <section className={`print-page print-competency-page ${hasVisibleFlowContent ? "" : "print-competency-after-cover"}`}>
         <PrintHeader page="Schlussseite" title="Handlungskompetenz" />
         <div className="mt-6">
@@ -1610,7 +1811,7 @@ function PrintHeader({ page, title }: { page: string; title: string }) {
 function PrintFooter() {
   return (
     <div className="print-final-footer border-t border-clay/40 pt-2 text-center text-[6.5pt] text-ink/40">
-      <span>Erstellt mit UVP Studio – entwickelt von Jan Hacker für die gewerblich-technische Universitätsberufsschule Bayreuth</span>
+      <span>{FOOTER_TEXT}</span>
     </div>
   );
 }
