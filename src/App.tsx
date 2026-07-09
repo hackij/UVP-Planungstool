@@ -10,6 +10,7 @@ import type { CompetencyArea, CompetencyDimension, Phase, Plan } from "./types.t
 
 const STORAGE_KEY = "uvp-studio-plan-v1";
 const SCHOOL_LOGO = "./bs1-logo-hell.png";
+const SEMINAR_LOGO = "./seminar-metalltechnik-logo.png";
 const LEGACY_PHASE_COLORS = new Set([
   "#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb",
   "#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268",
@@ -293,8 +294,12 @@ export default function App() {
             <div className="flex min-w-0 items-center gap-3 sm:gap-5">
               <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth und Technikerschule" className="h-11 w-auto max-w-[138px] shrink-0 object-contain sm:h-14 sm:max-w-[180px]" />
               <div className="min-w-0 border-l border-ink/10 pl-3 sm:pl-5">
-                <div className="font-display truncate text-lg font-bold uppercase leading-none text-ink sm:text-2xl">Seminar Metalltechnik</div>
-                <div className="mt-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-moss sm:text-[10px]">UVP Studio · Vom Ziel zur Stunde</div>
+                <img
+                  src={SEMINAR_LOGO}
+                  alt="Seminar Metalltechnik"
+                  className="h-10 w-auto max-w-[145px] object-contain object-left sm:h-14 sm:max-w-[210px]"
+                />
+                <div className="mt-1 text-[9px] font-bold uppercase tracking-[.2em] text-moss sm:text-[10px]">UVP Studio · Vom Ziel zur Stunde</div>
               </div>
             </div>
             <div className="hidden items-center gap-2 xl:flex">
@@ -1162,8 +1167,8 @@ function PrintHeader({ page, title }: { page: string; title: string }) {
     <div className="print-header flex items-center justify-between border-b border-ink/15 pb-[3mm]">
       <div className="flex items-center gap-[4mm]">
         <img src={SCHOOL_LOGO} alt="Staatliche Berufsschule 1 Bayreuth" className="h-[12mm] w-auto object-contain" />
-        <div>
-          <div className="font-display text-[12pt] font-bold uppercase leading-none text-ink">Seminar Metalltechnik</div>
+        <div className="border-l border-ink/15 pl-[4mm]">
+          <img src={SEMINAR_LOGO} alt="Seminar Metalltechnik" className="h-[13mm] w-auto max-w-[48mm] object-contain object-left" />
           <div className="mt-1 text-[6pt] font-bold uppercase tracking-[.18em] text-moss">UVP Studio</div>
         </div>
       </div>
