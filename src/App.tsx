@@ -6,7 +6,7 @@ import {
 import { initialPlan, PHASE_COLORS, phaseTemplate } from "./data.ts";
 import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
 import { VERB_CATALOG } from "./verbCatalog.ts";
-import type { CompetencyArea, CompetencyDimension, Phase, Plan } from "./types.ts";
+import type { CompetencyArea, CompetencyDimension, MindmapNode, Phase, Plan, TargetAudience } from "./types.ts";
 
 const STORAGE_KEY = "uvp-studio-plan-v1";
 const SCHOOL_LOGO = "./bs1-logo-hell.png";
@@ -25,6 +25,11 @@ const dimensions: { key: CompetencyDimension; label: string }[] = [
 ];
 const landscapeDimensions: { key: CompetencyDimension; label: string }[] = [
   { key: "wissen", label: "A: Wissen" }, { key: "koennen", label: "B: Können" }, { key: "wollen", label: "C: Wollen" },
+];
+const targetAudienceOptions: { key: TargetAudience; title: string; subtitle: string }[] = [
+  { key: "students", title: "Lehramtsstudierende", subtitle: "Vollständige Analyse- und Grobplanungsfassung" },
+  { key: "ref-beginning", title: "Referendariat am Anfang", subtitle: "Reduziert, aber mit didaktischer Orientierung" },
+  { key: "ref-compact", title: "Referendariat kompakt", subtitle: "Schlanker Planungsmodus mit Pflichtkernen" },
 ];
 
 const addMinutes = (time: string, minutes: number) => {
@@ -109,6 +114,14 @@ const normalizePlan = (candidate: unknown): Plan => {
   return {
     ...fallback,
     ...partial,
+    targetAudience: (["students", "ref-beginning", "ref-compact"] as const).includes(partial.targetAudience as TargetAudience) ? partial.targetAudience as TargetAudience : fallback.targetAudience,
+    learningPrerequisites: { ...fallback.learningPrerequisites, ...(partial.learningPrerequisites ?? {}) },
+    contentMindmap: Array.isArray(partial.contentMindmap) ? partial.contentMindmap.map((node, index) => ({
+      id: typeof node.id === "string" && node.id ? node.id : crypto.randomUUID(),
+      text: typeof node.text === "string" ? node.text : "",
+      x: Number.isFinite(Number(node.x)) ? Number(node.x) : 40 + index * 18,
+      y: Number.isFinite(Number(node.y)) ? Number(node.y) : 40 + index * 14,
+    })).filter((node) => node.text.trim()) : fallback.contentMindmap,
     preparation: { ...fallback.preparation, ...(partial.preparation ?? {}) },
     criteriaChecks: { ...fallback.criteriaChecks, ...(partial.criteriaChecks ?? {}) },
     phases: partial.phases.map((phase, index) => {
@@ -122,6 +135,9 @@ const normalizePlan = (candidate: unknown): Plan => {
         id,
         color: typeof phase.color === "string" && phase.color && !LEGACY_PHASE_COLORS.has(phase.color) ? phase.color : template.color,
         content: phase.content ?? "",
+        shortDescription: phase.shortDescription ?? "",
+        teacherAction: phase.teacherAction ?? phase.moderation ?? "",
+        studentAction: phase.studentAction ?? "",
         differentiationDetails: {
           ...template.differentiationDetails,
           ...(phase.differentiationDetails ?? {}),
@@ -149,12 +165,18 @@ export default function App() {
   const [imageBusy, setImageBusy] = useState(false);
   const [imageError, setImageError] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [compactDetailsOpen, setCompactDetailsOpen] = useState(false);
+  const [mindmapDraft, setMindmapDraft] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
   const situationImageRef = useRef<HTMLInputElement>(null);
 
   const totalMinutes = useMemo(() => plan.phases.reduce((sum, p) => sum + Number(p.minutes || 0), 0), [plan.phases]);
   const checkedCriteria = useMemo(() => Object.values(plan.criteriaChecks).filter(Boolean).length, [plan.criteriaChecks]);
   const selected = plan.phases.find((p) => p.id === selectedId) ?? plan.phases[0];
+  const isStudentMode = plan.targetAudience === "students";
+  const isCompactMode = plan.targetAudience === "ref-compact";
+  const showExtendedBlocks = isStudentMode || compactDetailsOpen;
+  const showMindmap = isStudentMode || (plan.targetAudience === "ref-beginning" && compactDetailsOpen);
 
   useEffect(() => {
     setSaved(false);
@@ -184,6 +206,27 @@ export default function App() {
   const updatePlan = <K extends keyof Plan>(key: K, value: Plan[K]) => setPlan((old) => ({ ...old, [key]: value }));
   const updatePhase = (id: string, patch: Partial<Phase>) =>
     setPlan((old) => ({ ...old, phases: old.phases.map((p) => p.id === id ? { ...p, ...patch } : p) }));
+  const updateLearningPrerequisite = <K extends keyof Plan["learningPrerequisites"]>(key: K, value: Plan["learningPrerequisites"][K]) =>
+    setPlan((old) => ({ ...old, learningPrerequisites: { ...old.learningPrerequisites, [key]: value } }));
+
+  const addMindmapNode = () => {
+    const text = mindmapDraft.trim();
+    if (!text) return;
+    const next: MindmapNode = {
+      id: crypto.randomUUID(),
+      text,
+      x: 36 + (plan.contentMindmap.length % 5) * 94,
+      y: 36 + Math.floor(plan.contentMindmap.length / 5) * 58,
+    };
+    setPlan((old) => ({ ...old, contentMindmap: [...old.contentMindmap, next] }));
+    setMindmapDraft("");
+  };
+
+  const updateMindmapNode = (id: string, patch: Partial<MindmapNode>) =>
+    setPlan((old) => ({ ...old, contentMindmap: old.contentMindmap.map((node) => node.id === id ? { ...node, ...patch } : node) }));
+
+  const deleteMindmapNode = (id: string) =>
+    setPlan((old) => ({ ...old, contentMindmap: old.contentMindmap.filter((node) => node.id !== id) }));
 
   const updateCompetency = (area: CompetencyArea, dimension: CompetencyDimension, value: number) => {
     if (!selected) return;
@@ -283,6 +326,8 @@ export default function App() {
     setVerbCatalogOpen(null);
     setMobileNav(false);
     setImageError("");
+    setCompactDetailsOpen(false);
+    setMindmapDraft("");
     if (situationImageRef.current) situationImageRef.current.value = "";
   };
 
@@ -303,6 +348,16 @@ export default function App() {
               </div>
             </div>
             <div className="hidden items-center gap-2 xl:flex">
+              <label className="mr-1 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper px-3 py-2 text-xs font-bold text-ink/60">
+                Zielgruppe
+                <select
+                  className="bg-transparent text-xs font-bold text-ink outline-none"
+                  value={plan.targetAudience}
+                  onChange={(event) => updatePlan("targetAudience", event.target.value as TargetAudience)}
+                >
+                  {targetAudienceOptions.map((option) => <option key={option.key} value={option.key}>{option.title}</option>)}
+                </select>
+              </label>
               <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-medium text-ink/45">
                 {saved ? <Check size={14} /> : <Save size={14} className="animate-pulse" />}
                 {saved ? "Lokal gespeichert" : "Speichert …"}
@@ -323,6 +378,16 @@ export default function App() {
           </div>
           {mobileNav && (
             <div className="grid gap-2 border-t border-ink/10 bg-white p-4 xl:hidden">
+              <label className="rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-xs font-bold uppercase tracking-[.12em] text-ink/45">
+                Zielgruppe
+                <select
+                  className="mt-2 w-full bg-transparent text-sm font-bold normal-case tracking-normal text-ink outline-none"
+                  value={plan.targetAudience}
+                  onChange={(event) => updatePlan("targetAudience", event.target.value as TargetAudience)}
+                >
+                  {targetAudienceOptions.map((option) => <option key={option.key} value={option.key}>{option.title}</option>)}
+                </select>
+              </label>
               <button className="icon-btn border-clay/25 text-clay" onClick={resetPlan}><RotateCcw size={16} />Planung zurücksetzen</button>
               <button className="icon-btn" onClick={() => { setCriteriaOpen(true); setMobileNav(false); }}><ClipboardCheck size={16} />Prüfungskriterien</button>
               <button className="icon-btn" onClick={() => importRef.current?.click()}><Upload size={16} />Plan importieren</button>
@@ -334,11 +399,38 @@ export default function App() {
         </header>
 
         <main className="mx-auto w-full max-w-[1540px] flex-1 px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
+          <section className="mb-8 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-soft sm:p-6">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="label">Zielgruppenmodus</div>
+                <h1 className="font-display text-2xl font-bold sm:text-3xl">Für wen planst du diese Unterrichtseinheit?</h1>
+              </div>
+              <span className="rounded-full bg-sky/15 px-3 py-1.5 text-xs font-bold text-moss">dauerhaft änderbar</span>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+              {targetAudienceOptions.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  aria-pressed={plan.targetAudience === option.key}
+                  className={`rounded-3xl border p-4 text-left transition ${plan.targetAudience === option.key ? "border-clay bg-clay text-white shadow-soft" : "border-ink/10 bg-paper/50 text-ink hover:border-moss/40 hover:bg-sky/10"}`}
+                  onClick={() => updatePlan("targetAudience", option.key)}
+                >
+                  <span className="block font-display text-xl font-bold">{option.title}</span>
+                  <span className={`mt-1 block text-sm leading-snug ${plan.targetAudience === option.key ? "text-white/70" : "text-ink/50"}`}>{option.subtitle}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section className="relative overflow-hidden rounded-[2rem] border border-ink/10 bg-white px-5 py-7 text-ink shadow-soft sm:px-8 lg:px-10 lg:py-9">
             <div className="absolute inset-x-0 top-0 h-1 bg-clay" />
             <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border-[45px] border-sky/10" />
             <div className="relative">
-              <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsentwurf</div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-moss"><BookOpen size={15} />Unterrichtsvorbereitung nach Müller/Dier</div>
+              <h2 className="font-display text-3xl font-bold">Analysen & Grobplanung</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">Kläre Rahmenbedingungen, Vorgaben, Kompetenzbedarf, Inhalte und Lernvoraussetzungen. Daraus entsteht anschließend das Unterrichtsgrobkonzept.</p>
+              <div className="mt-6 mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-clay">1 · Allgemeine Rahmenbedingungen klären</div>
               <label className="block max-w-3xl rounded-2xl border border-moss/15 bg-sky/10 px-4 py-3">
                 <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[.14em] text-moss">Name der unterrichtenden Lehrkraft</span>
                 <input
@@ -427,6 +519,23 @@ export default function App() {
                     {imageError && <p className="mt-2 text-[10px] font-semibold leading-snug text-clay">{imageError}</p>}
                   </div>
                 </div>
+                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-clay">2 · Direkte Vorgaben und Ressourcen berücksichtigen</div>
+                {showExtendedBlocks && (
+                  <div className="mb-5 grid gap-4 sm:grid-cols-3">
+                    <label className="block">
+                      <span className="label">Bezug zum Lehrplan</span>
+                      <textarea className="field min-h-24" value={plan.curriculumReference} onChange={(event) => updatePlan("curriculumReference", event.target.value)} placeholder="Kompetenzerwartungen, Lernfeld, Lehrplanbezug …" />
+                    </label>
+                    <label className="block">
+                      <span className="label">Didaktische Jahresplanung</span>
+                      <textarea className="field min-h-24" value={plan.annualPlanReference} onChange={(event) => updatePlan("annualPlanReference", event.target.value)} placeholder="Sequenz, Lernfeld, Anschluss …" />
+                    </label>
+                    <label className="block">
+                      <span className="label">Einordnung des Themas</span>
+                      <textarea className="field min-h-24" value={plan.topicPlacement} onChange={(event) => updatePlan("topicPlacement", event.target.value)} placeholder="Warum jetzt? Vorher/Nachher? Bedeutung im Bildungsgang …" />
+                    </label>
+                  </div>
+                )}
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Globalziel der Unterrichtseinheit</label>
                 <textarea
                   aria-label="Globalziel"
@@ -442,6 +551,50 @@ export default function App() {
                   value={plan.learningContent}
                   onChange={(event) => updatePlan("learningContent", event.target.value)}
                 />
+                {(plan.targetAudience !== "ref-compact" || compactDetailsOpen) && (
+                <div className="mt-5 grid gap-4">
+                  <div className="rounded-2xl border border-ink/10 bg-paper/50 p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-[.16em] text-clay">3 · Kompetenzbedarf ermitteln</div>
+                        <p className="mt-1 text-xs leading-relaxed text-ink/50">Verknüpfe die berufliche Anforderung mit Wissen, Können und Wollen. Die konkrete Zuordnung erfolgt weiterhin in den Phasen über die Handlungskompetenzmatrix.</p>
+                      </div>
+                      <InfoHint title="Späterer Hilfeblock" />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <label><span className="label">Kompetenzen</span><textarea className="field min-h-24" value={plan.competencyIntentions} onChange={(event) => updatePlan("competencyIntentions", event.target.value)} placeholder="Welche Kompetenzen sollen angebahnt oder erweitert werden?" /></label>
+                      <label><span className="label">Kompetenzbedarf</span><textarea className="field min-h-24" value={plan.competencyDemand} onChange={(event) => updatePlan("competencyDemand", event.target.value)} placeholder="Was ergibt sich aus der beruflichen Anforderung?" /></label>
+                      <label><span className="label">Wissen · Können · Wollen</span><textarea className="field min-h-24" value={plan.wkwFocus} onChange={(event) => updatePlan("wkwFocus", event.target.value)} placeholder="Welche Aspekte stehen im Mittelpunkt?" /></label>
+                    </div>
+                  </div>
+
+                  {(isStudentMode || plan.targetAudience === "ref-beginning") && (
+                  <div className="rounded-2xl border border-ink/10 bg-white p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-[.16em] text-clay">4 · Inhalte analysieren, strukturieren und auswählen</div>
+                        <p className="mt-1 text-xs leading-relaxed text-ink/50">{showMindmap ? "Ordne zentrale Begriffe frei auf der Arbeitsfläche an." : "Die Mindmap ist in diesem Zielgruppenmodus ausgeblendet und kann optional geöffnet werden."}</p>
+                      </div>
+                      {!isStudentMode && (
+                        <button type="button" className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/55 transition hover:text-ink" onClick={() => setCompactDetailsOpen(!compactDetailsOpen)}>
+                          {compactDetailsOpen ? "Optionen ausblenden" : "Optionen anzeigen"}
+                        </button>
+                      )}
+                    </div>
+                    {showMindmap && (
+                      <MindmapCanvas
+                        nodes={plan.contentMindmap}
+                        draft={mindmapDraft}
+                        onDraftChange={setMindmapDraft}
+                        onAdd={addMindmapNode}
+                        onUpdate={updateMindmapNode}
+                        onDelete={deleteMindmapNode}
+                      />
+                    )}
+                  </div>
+                  )}
+                </div>
+                )}
                 <div className="mt-4 rounded-2xl border border-ink/10 bg-paper/50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -480,6 +633,53 @@ export default function App() {
                     </label>
                   )}
                 </div>
+                <div className="mt-5 rounded-2xl border border-ink/10 bg-white p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-[.16em] text-clay">5 · Lernvoraussetzungen erfassen und analysieren</div>
+                      <p className="mt-1 text-xs leading-relaxed text-ink/50">
+                        {isCompactMode ? "In der kompakten Ansicht optional einklappbar." : "Was bringen die Lernenden fachlich, sprachlich, methodisch und sozial mit?"}
+                      </p>
+                    </div>
+                    {isCompactMode && (
+                      <button type="button" className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/55 transition hover:text-ink" onClick={() => setCompactDetailsOpen(!compactDetailsOpen)}>
+                        {compactDetailsOpen ? "Ausblenden" : "Einblenden"}
+                      </button>
+                    )}
+                  </div>
+                  {isCompactMode && !compactDetailsOpen ? (
+                    <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-ink/50">Dieser Analyseblock ist im kompakten Modus eingeklappt. Bei Bedarf kannst du ihn einblenden.</div>
+                  ) : (
+                    <div className={`grid gap-3 ${isStudentMode ? "md:grid-cols-2" : ""}`}>
+                      {isStudentMode ? (
+                        <>
+                          <label><span className="label">Vorwissen</span><textarea className="field min-h-20" value={plan.learningPrerequisites.priorKnowledge} onChange={(event) => updateLearningPrerequisite("priorKnowledge", event.target.value)} /></label>
+                          <label><span className="label">Fachliche Voraussetzungen</span><textarea className="field min-h-20" value={plan.learningPrerequisites.subject} onChange={(event) => updateLearningPrerequisite("subject", event.target.value)} /></label>
+                          <label><span className="label">Sprachliche Voraussetzungen</span><textarea className="field min-h-20" value={plan.learningPrerequisites.language} onChange={(event) => updateLearningPrerequisite("language", event.target.value)} /></label>
+                          <label><span className="label">Methodische Voraussetzungen</span><textarea className="field min-h-20" value={plan.learningPrerequisites.methodological} onChange={(event) => updateLearningPrerequisite("methodological", event.target.value)} /></label>
+                          <label><span className="label">Soziale Voraussetzungen</span><textarea className="field min-h-20" value={plan.learningPrerequisites.social} onChange={(event) => updateLearningPrerequisite("social", event.target.value)} /></label>
+                          <label><span className="label">Mögliche Lernschwierigkeiten</span><textarea className="field min-h-20" value={plan.learningPrerequisites.difficulties} onChange={(event) => updateLearningPrerequisite("difficulties", event.target.value)} /></label>
+                          <label className="md:col-span-2"><span className="label">Konsequenzen für die Planung</span><textarea className="field min-h-20" value={plan.learningPrerequisites.consequences} onChange={(event) => updateLearningPrerequisite("consequences", event.target.value)} /></label>
+                        </>
+                      ) : (
+                        <label><span className="label">Lernvoraussetzungen kompakt</span><textarea className="field min-h-28" value={plan.learningPrerequisites.compact} onChange={(event) => updateLearningPrerequisite("compact", event.target.value)} placeholder="Vorwissen, Schwierigkeiten und Konsequenzen für die Planung …" /></label>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {(showExtendedBlocks || plan.targetAudience === "ref-beginning") && (
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <label className="rounded-2xl border border-ink/10 bg-paper/50 p-4">
+                      <span className="label">Didaktische Überlegungen</span>
+                      <textarea className="field min-h-28 bg-white" value={plan.didacticConsiderations} onChange={(event) => updatePlan("didacticConsiderations", event.target.value)} placeholder="Auswahl, Reduktion, Sequenzierung, didaktischer Kern …" />
+                    </label>
+                    <label className="rounded-2xl border border-ink/10 bg-paper/50 p-4">
+                      <span className="label">Methodische Überlegungen</span>
+                      <textarea className="field min-h-28 bg-white" value={plan.methodologicalConsiderations} onChange={(event) => updatePlan("methodologicalConsiderations", event.target.value)} placeholder="Lernweg, Sozialformen, Medien, Sicherung, Aktivierung …" />
+                    </label>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="col-span-2 rounded-2xl border border-ink/10 bg-paper/60 p-4">
@@ -500,6 +700,18 @@ export default function App() {
                   <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Beginn</span>
                   <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.startTime} onChange={(e) => updatePlan("startTime", e.target.value)} />
                 </label>
+                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Anzahl SuS</span>
+                  <input className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25" placeholder="z. B. 24" value={plan.studentCount} onChange={(e) => updatePlan("studentCount", e.target.value)} />
+                </label>
+                <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Zeitlicher Umfang</span>
+                  <input className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25" placeholder="z. B. 90 Min" value={plan.lessonDuration} onChange={(e) => updatePlan("lessonDuration", e.target.value)} />
+                </label>
+                <label className="col-span-2 rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Weitere organisatorische Rahmenbedingungen</span>
+                  <textarea className="min-h-24 w-full bg-transparent text-sm leading-relaxed outline-none placeholder:text-ink/25" placeholder="Raum, Gruppengröße, besondere Ressourcen, Einschränkungen …" value={plan.organizationNotes} onChange={(e) => updatePlan("organizationNotes", e.target.value)} />
+                </label>
                 <div className="col-span-2 flex items-center justify-between gap-3 rounded-2xl bg-clay px-4 py-3 text-white">
                   <span>
                     <span className="block text-xs font-bold uppercase tracking-wider">Kalkulierte Unterrichtszeit</span>
@@ -515,8 +727,8 @@ export default function App() {
           <section className="mt-8">
             <div className="mb-4 flex items-end justify-between">
               <div>
-                <div className="label">Der rote Faden deiner Stunde</div>
-                <h2 className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsverlaufplan</h2>
+                <div className="label">6 · Unterrichtsgrobkonzept</div>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsgrobkonzept: Der rote Faden deiner Stunde</h2>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <button
@@ -570,12 +782,22 @@ export default function App() {
                         className={`relative z-10 overflow-hidden rounded-[2rem] border bg-white text-left transition duration-300 ${isEntry ? "h-52 w-64" : "h-44 w-48"} ${active ? "scale-[1.025] shadow-soft" : "border-ink/10 hover:-translate-y-1 hover:shadow-soft"} ${dragging ? "opacity-35" : "opacity-100"}`}
                         style={active ? { borderColor: phase.color, boxShadow: `0 18px 45px ${phase.color}22` } : undefined}
                       >
-                        <button className={`flex h-full w-full flex-col justify-between text-left ${isEntry ? "p-5" : "p-4"}`} onClick={() => setSelectedId(phase.id)}>
+                        <div className={`flex h-full w-full flex-col justify-between text-left ${isEntry ? "p-5" : "p-4"}`} onClick={() => setSelectedId(phase.id)}>
                           <div className="absolute right-0 top-0 h-16 w-16 rounded-bl-[3rem] opacity-90" style={{ background: phase.color }} />
                           <div className="relative">
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.15em] text-ink/45"><GripVertical size={12} />Phase {index + 1}</span>
-                            <div className={`mt-2 font-display font-bold leading-tight ${isEntry ? "text-2xl" : "text-xl"}`}>{phase.title || "Ohne Titel"}</div>
-                            {isEntry && <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-ink/55">{phase.moderation || "Moderation ergänzen …"}</p>}
+                            <input
+                              aria-label={`Titel von Phase ${index + 1}`}
+                              className={`mt-2 w-[calc(100%-2.25rem)] border-0 bg-transparent p-0 font-display font-bold leading-tight outline-none placeholder:text-ink/25 ${isEntry ? "text-2xl" : "text-xl"}`}
+                              placeholder="Titel der Phase"
+                              value={phase.title}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedId(phase.id);
+                              }}
+                              onChange={(event) => updatePhase(phase.id, { title: event.target.value })}
+                            />
+                            {isEntry && <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-ink/55">{phase.shortDescription || phase.teacherAction || "Kurzbeschreibung ergänzen …"}</p>}
                           </div>
                           <div className="relative flex items-end justify-between">
                             <div>
@@ -584,7 +806,7 @@ export default function App() {
                             </div>
                             <ChevronRight size={18} className={active ? "text-ink" : "text-ink/25"} />
                           </div>
-                        </button>
+                        </div>
                         <button
                           type="button"
                           aria-label={`Phase ${index + 1} löschen`}
@@ -620,10 +842,12 @@ export default function App() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <label><span className="label">Phasen-Titel</span><input className="field" value={selected.title} onChange={(e) => updatePhase(selected.id, { title: e.target.value })} /></label>
                   <label><span className="label">Zeit in Minuten</span><input className="field" min="1" max="240" type="number" value={selected.minutes} onChange={(e) => updatePhase(selected.id, { minutes: Math.max(0, Number(e.target.value)) })} /></label>
-                  <label className="sm:col-span-2"><span className="label">Wir-Lernziel</span><textarea className="field min-h-20" value={selected.goal} onChange={(e) => updatePhase(selected.id, { goal: e.target.value })} /></label>
+                  <label className="sm:col-span-2"><span className="label">Kurzbeschreibung der Phase</span><textarea className="field min-h-16" placeholder="Welche Funktion hat diese Phase im Unterrichtsverlauf?" value={selected.shortDescription} onChange={(e) => updatePhase(selected.id, { shortDescription: e.target.value })} /></label>
+                  <label className="sm:col-span-2"><span className="label">Kompetenzorientierte Zielformulierung</span><textarea className="field min-h-20" placeholder="Die Lernenden können …" value={selected.goal} onChange={(e) => updatePhase(selected.id, { goal: e.target.value })} /></label>
                   <label className="sm:col-span-2"><span className="label">Unterrichtsinhalt</span><textarea className="field min-h-24" placeholder="Was wird in dieser Phase fachlich thematisiert?" value={selected.content} onChange={(e) => updatePhase(selected.id, { content: e.target.value })} /></label>
                   <label><span className="label">Methoden & Material</span><textarea className="field min-h-28" placeholder="z. B. Think–Pair–Share, Impulskarte …" value={selected.methods} onChange={(e) => updatePhase(selected.id, { methods: e.target.value })} /></label>
-                  <label><span className="label">Moderation</span><textarea className="field min-h-28" placeholder="Leitfragen, Übergänge, Impulse …" value={selected.moderation} onChange={(e) => updatePhase(selected.id, { moderation: e.target.value })} /></label>
+                  <label><span className="label">Lehrhandlung</span><textarea className="field min-h-28" placeholder="Was tut die Lehrkraft? Impulse, Strukturierung, Begleitung …" value={selected.teacherAction} onChange={(e) => updatePhase(selected.id, { teacherAction: e.target.value, moderation: e.target.value })} /></label>
+                  <label><span className="label">Lernhandlung</span><textarea className="field min-h-28" placeholder="Was tun die Schülerinnen und Schüler? Denken, handeln, kooperieren …" value={selected.studentAction} onChange={(e) => updatePhase(selected.id, { studentAction: e.target.value })} /></label>
                   <div className="sm:col-span-2">
                     <span className="label">Differenzierung</span>
                     <div className="flex flex-wrap gap-2">
@@ -769,6 +993,101 @@ export default function App() {
       )}
       <PrintDocument plan={plan} totalMinutes={totalMinutes} />
     </>
+  );
+}
+
+function InfoHint({ title }: { title: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-ink/10 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.12em] text-ink/35">
+      {title}
+    </span>
+  );
+}
+
+function MindmapCanvas({
+  nodes,
+  draft,
+  onDraftChange,
+  onAdd,
+  onUpdate,
+  onDelete,
+}: {
+  nodes: MindmapNode[];
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onAdd: () => void;
+  onUpdate: (id: string, patch: Partial<MindmapNode>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<{ id: string; dx: number; dy: number } | null>(null);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (event: PointerEvent) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x = Math.min(Math.max(8, event.clientX - rect.left - dragging.dx), Math.max(8, rect.width - 130));
+      const y = Math.min(Math.max(8, event.clientY - rect.top - dragging.dy), Math.max(8, rect.height - 52));
+      onUpdate(dragging.id, { x, y });
+    };
+    const up = () => setDragging(null);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+  }, [dragging, onUpdate]);
+
+  return (
+    <div>
+      <div className="mb-3 flex gap-2">
+        <input
+          className="field"
+          value={draft}
+          placeholder="Schlagwort ergänzen …"
+          onChange={(event) => onDraftChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onAdd();
+            }
+          }}
+        />
+        <button type="button" className="icon-btn shrink-0" onClick={onAdd}><Plus size={16} />Begriff</button>
+      </div>
+      <div ref={canvasRef} className="relative h-[310px] overflow-hidden rounded-3xl border border-dashed border-ink/15 bg-[radial-gradient(circle_at_1px_1px,rgba(12,35,64,.08)_1px,transparent_0)] [background-size:18px_18px]">
+        {nodes.length === 0 && (
+          <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-ink/35">Noch keine Begriffskarten angelegt.</div>
+        )}
+        {nodes.map((node) => (
+          <div
+            key={node.id}
+            className="absolute w-[130px] rounded-2xl border border-moss/20 bg-white p-2 shadow-soft"
+            style={{ left: node.x, top: node.y }}
+          >
+            <div
+              className="mb-1 flex cursor-grab items-center justify-between gap-1 active:cursor-grabbing"
+              onPointerDown={(event) => {
+                const rect = (event.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+                setDragging({ id: node.id, dx: event.clientX - rect.left, dy: event.clientY - rect.top });
+              }}
+            >
+              <span className="text-[9px] font-bold uppercase tracking-[.14em] text-moss">Inhalt</span>
+              <button type="button" className="grid h-6 w-6 place-items-center rounded-full text-clay hover:bg-clay/10" onClick={() => onDelete(node.id)}><X size={13} /></button>
+            </div>
+            <textarea
+              aria-label="Mindmap-Begriff bearbeiten"
+              className="min-h-12 w-full resize-none border-0 bg-transparent text-sm font-bold leading-tight text-ink outline-none"
+              value={node.text}
+              onPointerDown={(event) => event.stopPropagation()}
+              onChange={(event) => onUpdate(node.id, { text: event.target.value })}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1021,6 +1340,26 @@ function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; com
 
 function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: number }) {
   const hasVisibleFlowContent = plan.phases.length > 0;
+  const audience = targetAudienceOptions.find((option) => option.key === plan.targetAudience)?.title ?? "Lehramtsstudierende";
+  const detailedPdf = plan.targetAudience !== "ref-compact";
+  const hasAnalysisContent = detailedPdf && [
+    plan.curriculumReference,
+    plan.annualPlanReference,
+    plan.topicPlacement,
+    plan.competencyIntentions,
+    plan.competencyDemand,
+    plan.wkwFocus,
+    plan.didacticConsiderations,
+    plan.methodologicalConsiderations,
+    plan.learningPrerequisites.compact,
+    plan.learningPrerequisites.priorKnowledge,
+    plan.learningPrerequisites.subject,
+    plan.learningPrerequisites.language,
+    plan.learningPrerequisites.methodological,
+    plan.learningPrerequisites.social,
+    plan.learningPrerequisites.difficulties,
+    plan.learningPrerequisites.consequences,
+  ].some((value) => value.trim()) || (detailedPdf && plan.contentMindmap.some((node) => node.text.trim()));
 
   return (
     <div className="print-only">
@@ -1035,12 +1374,20 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
           <h1 className="mt-1 font-display text-[21pt] font-bold leading-tight">{plan.topic || "—"}</h1>
           <div className="mt-[4mm] grid grid-cols-2 gap-[4mm]">
             <div className="rounded-[4mm] bg-paper p-[4mm]">
+              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Zielgruppe</div>
+              <div className="mt-1 text-[10pt] font-bold">{audience}</div>
+            </div>
+            <div className="rounded-[4mm] bg-paper p-[4mm]">
               <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Klasse</div>
               <div className="mt-1 text-[11pt] font-bold">{plan.className || "—"}</div>
             </div>
             <div className="rounded-[4mm] bg-paper p-[4mm]">
               <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Datum</div>
               <div className="mt-1 text-[11pt] font-bold">{plan.date || "—"}</div>
+            </div>
+            <div className="rounded-[4mm] bg-paper p-[4mm]">
+              <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Anzahl SuS</div>
+              <div className="mt-1 text-[11pt] font-bold">{plan.studentCount || "—"}</div>
             </div>
           </div>
         </div>
@@ -1077,6 +1424,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
           <div className="rounded-[4mm] border border-ink/10 px-[4mm] py-[3mm]">
             <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Unterrichtsbeginn</div>
             <div className="mt-1 font-display text-[14pt] font-bold">{plan.startTime ? `${plan.startTime} Uhr` : "—"}</div>
+            {plan.lessonDuration && <div className="mt-1 text-[7pt] font-bold text-ink/45">Zeitlicher Umfang: {plan.lessonDuration}</div>}
           </div>
           <div className="min-w-[92mm] rounded-[4mm] bg-clay px-[5mm] py-[3mm] text-white">
             <div className="text-[7pt] font-bold uppercase tracking-[.15em] opacity-70">Aus den Phasen kalkuliert</div>
@@ -1085,7 +1433,80 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             </div>
           </div>
         </div>
+        {plan.organizationNotes && (
+          <div className="mt-[3mm] rounded-[4mm] border border-ink/10 bg-white px-[4mm] py-[2.5mm]">
+            <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-ink/40">Weitere organisatorische Rahmenbedingungen</div>
+            <p className="mt-1 whitespace-pre-wrap text-[8pt] leading-snug text-ink/65">{plan.organizationNotes}</p>
+          </div>
+        )}
       </section>
+
+      {hasAnalysisContent && (
+        <section className="print-flow">
+          <div className="print-flow-heading">
+            <PrintHeader page="Analyse" title="Analysen & Grobplanung" />
+            <div className="mt-[7mm]">
+              <div className="text-[8pt] font-bold uppercase tracking-[.18em] text-clay">Analysen & Grobplanung</div>
+              <h1 className="mt-1 font-display text-[22pt] font-bold">Didaktische Vorüberlegungen</h1>
+            </div>
+          </div>
+          <div className="mt-[6mm] grid gap-[4mm] text-[8.5pt] leading-relaxed">
+            {(plan.curriculumReference || plan.annualPlanReference || plan.topicPlacement) && (
+              <div className="rounded-[4mm] border border-ink/10 p-[4mm]">
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Direkte Vorgaben und Ressourcen</div>
+                <div className="mt-2 grid grid-cols-3 gap-[4mm]">
+                  <p><b>Lehrplan:</b><br />{plan.curriculumReference || "—"}</p>
+                  <p><b>Didaktische Jahresplanung:</b><br />{plan.annualPlanReference || "—"}</p>
+                  <p><b>Einordnung:</b><br />{plan.topicPlacement || "—"}</p>
+                </div>
+              </div>
+            )}
+            {(plan.competencyIntentions || plan.competencyDemand || plan.wkwFocus) && (
+              <div className="rounded-[4mm] border border-ink/10 p-[4mm]">
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Kompetenzbedarf</div>
+                <div className="mt-2 grid grid-cols-3 gap-[4mm]">
+                  <p><b>Kompetenzen:</b><br />{plan.competencyIntentions || "—"}</p>
+                  <p><b>Bedarf:</b><br />{plan.competencyDemand || "—"}</p>
+                  <p><b>Wissen · Können · Wollen:</b><br />{plan.wkwFocus || "—"}</p>
+                </div>
+              </div>
+            )}
+            {(plan.learningPrerequisites.compact || plan.learningPrerequisites.priorKnowledge || plan.learningPrerequisites.consequences) && (
+              <div className="rounded-[4mm] border border-ink/10 p-[4mm]">
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Lernvoraussetzungen</div>
+                <p className="mt-2 whitespace-pre-wrap">{plan.learningPrerequisites.compact || [
+                  plan.learningPrerequisites.priorKnowledge,
+                  plan.learningPrerequisites.subject,
+                  plan.learningPrerequisites.language,
+                  plan.learningPrerequisites.methodological,
+                  plan.learningPrerequisites.social,
+                  plan.learningPrerequisites.difficulties,
+                  plan.learningPrerequisites.consequences,
+                ].filter(Boolean).join("\n") || "—"}</p>
+              </div>
+            )}
+            {(plan.didacticConsiderations || plan.methodologicalConsiderations) && (
+              <div className="rounded-[4mm] border border-ink/10 p-[4mm]">
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Didaktische und methodische Überlegungen</div>
+                <div className="mt-2 grid grid-cols-2 gap-[4mm]">
+                  <p><b>Didaktik:</b><br />{plan.didacticConsiderations || "—"}</p>
+                  <p><b>Methodik:</b><br />{plan.methodologicalConsiderations || "—"}</p>
+                </div>
+              </div>
+            )}
+            {detailedPdf && plan.contentMindmap.some((node) => node.text.trim()) && (
+              <div className="rounded-[4mm] border border-ink/10 p-[4mm]">
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Mindmap Lerninhalte</div>
+                <div className="mt-2 flex flex-wrap gap-[2mm]">
+                  {plan.contentMindmap.filter((node) => node.text.trim()).map((node) => (
+                    <span key={node.id} className="rounded-full bg-sky/20 px-[3mm] py-[1.5mm] text-[8pt] font-bold text-ink">{node.text}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {hasVisibleFlowContent && (
         <section className="print-flow">
@@ -1115,21 +1536,31 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-[6mm] gap-y-[4mm] p-[5mm] text-[9pt] leading-relaxed">
+                  {phase.shortDescription && (
+                    <div className="col-span-2 rounded-[3mm] bg-paper px-[4mm] py-[2.5mm]">
+                      <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-clay">Kurzbeschreibung der Phase</div>
+                      <p className="mt-1 whitespace-pre-wrap">{phase.shortDescription}</p>
+                    </div>
+                  )}
                   <div>
-                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Wir-Lernziel</div>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Kompetenzorientierte Zielformulierung</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.goal || "—"}</p>
                   </div>
                   <div>
                     <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Unterrichtsinhalt</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.content || "—"}</p>
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Methoden & Material</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.methods || "—"}</p>
                   </div>
                   <div>
-                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Moderation</div>
-                    <p className="mt-1 whitespace-pre-wrap">{phase.moderation || "—"}</p>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Lehrhandlung</div>
+                    <p className="mt-1 whitespace-pre-wrap">{phase.teacherAction || phase.moderation || "—"}</p>
+                  </div>
+                  <div>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Lernhandlung</div>
+                    <p className="mt-1 whitespace-pre-wrap">{phase.studentAction || "—"}</p>
                   </div>
                   {phase.differentiation === "Ja" && (
                     <div className="col-span-2 rounded-[3mm] bg-paper px-[4mm] py-[3mm]">
