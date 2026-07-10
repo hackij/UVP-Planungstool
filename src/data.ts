@@ -1,4 +1,4 @@
-import type { Competencies, Phase, Plan } from "./types.ts";
+import type { Competencies, CompetencyNeedAnalysis, Phase, Plan } from "./types.ts";
 
 // Farbenblindheitsfreundliche, klar unterscheidbare Akzentfarben.
 export const PHASE_COLORS = ["#009E73", "#E69F00", "#0072B2", "#D55E00", "#8B5CF6", "#CC79A7", "#56B4E9", "#7A7F00"];
@@ -7,6 +7,13 @@ export const emptyCompetencies = (): Competencies => ({
   fach: { wissen: 0, wollen: 0, koennen: 0 },
   selbst: { wissen: 0, wollen: 0, koennen: 0 },
   sozial: { wissen: 0, wollen: 0, koennen: 0 },
+});
+
+export const emptyCompetencyNeedAnalysis = (): CompetencyNeedAnalysis => ({
+  selectedFields: [],
+  selectedLevels: {},
+  entries: {},
+  summary: "",
 });
 
 const phase = (title: string, minutes: number, color: string, goal = ""): Phase => ({
@@ -49,6 +56,7 @@ export const initialPlan = (): Plan => ({
   competencyIntentions: "",
   competencyDemand: "",
   wkwFocus: "",
+  competencyNeedAnalysis: emptyCompetencyNeedAnalysis(),
   learningPrerequisites: {
     priorKnowledge: "",
     subject: "",
@@ -58,10 +66,18 @@ export const initialPlan = (): Plan => ({
     difficulties: "",
     consequences: "",
     compact: "",
+    groupFactors: [],
+    groupOther: "",
+    specialFactors: [],
+    specialOther: "",
+    selectedConsequences: {},
+    customConsequences: {},
   },
   didacticConsiderations: "",
   methodologicalConsiderations: "",
   contentMindmap: [],
+  contentBubbles: [],
+  contentConnections: [],
   preparation: { before: "", during: "", after: "" },
   criteriaChecks: {},
   phases: [],
