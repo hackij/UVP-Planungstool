@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -15,7 +16,7 @@ const MIME_TYPES = {
   ".webp": "image/webp",
 };
 
-const ASSET_ROOT = new URL("../client/", import.meta.url);
+const ASSET_ROOT = path.join(process.cwd(), "dist", "client");
 
 const extensionOf = (pathname) => {
   const match = pathname.match(/\.[a-z0-9]+$/i);
@@ -26,7 +27,7 @@ const safeAssetUrl = (pathname) => {
   const decoded = decodeURIComponent(pathname);
   if (decoded.includes("..") || decoded.includes("\\")) return null;
   const assetPath = decoded === "/" || !extensionOf(decoded) ? "index.html" : decoded.replace(/^\/+/, "");
-  return new URL(assetPath, ASSET_ROOT);
+  return path.join(ASSET_ROOT, assetPath);
 };
 
 const serveAsset = async (pathname) => {
@@ -36,7 +37,7 @@ const serveAsset = async (pathname) => {
     const body = await readFile(assetUrl);
     return new Response(body, {
       headers: {
-        "content-type": MIME_TYPES[extensionOf(assetUrl.pathname)] ?? "application/octet-stream",
+        "content-type": MIME_TYPES[extensionOf(assetUrl)] ?? "application/octet-stream",
       },
     });
   } catch {
