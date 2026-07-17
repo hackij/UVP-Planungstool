@@ -6,13 +6,13 @@ import {
 import { emptyCompetencyNeedAnalysis, initialPlan, PHASE_COLORS, phaseTemplate } from "./data.ts";
 import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
 import { VERB_CATALOG } from "./verbCatalog.ts";
+import { ACCESS_SESSION_KEY, APP_ACCESS_CODE, APP_FOOTER_TEXT, APP_VERSION } from "./appConfig.ts";
 import type { BubbleSide, CompetencyArea, CompetencyDimension, CompetencyFieldId, CompetencyNeedAnalysis, CompetencyNeedEntry, ContentBubble, ContentConnection, MindmapNode, Phase, Plan, TargetAudience } from "./types.ts";
 
 const STORAGE_KEY = "uvp-studio-plan-v1";
 const SCHOOL_LOGO = "./bs1-logo-hell.png";
 const SEMINAR_LOGO = "./seminar-metalltechnik-logo.png";
-const UVM_IMAGE = "./unterrichtsentwicklungsraum.png";
-const FOOTER_TEXT = "Erstellt mit UVP Studio – entwickelt von Jan Hacker unter fachlicher Beratung von Prof. Dr. Manfred Müller und Dr. Moritz Dier für die gewerblich-technische Universitätsberufsschule Bayreuth";
+const HKM_REFERENCE_IMAGE = "./handlungskompetenzmatrix-dier-referenz-ohne-caption.png";
 const LEGACY_PHASE_COLORS = new Set([
   "#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb",
   "#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268",
@@ -31,6 +31,8 @@ const landscapeDimensions: { key: CompetencyDimension; label: string }[] = [
 const competencyFieldOrder: CompetencyFieldId[] = areas.flatMap((area) => dimensions.map((dimension) => `${area.key}-${dimension.key}` as CompetencyFieldId));
 const defaultCompetencyNeedEntry = (): CompetencyNeedEntry => ({
   demand: "",
+  levelGoal: "",
+  levelDescription: "",
   selectedClarifications: [],
   customClarification: "",
   selectedConsequences: [],
@@ -65,18 +67,114 @@ const targetAudienceOptions: { key: TargetAudience; title: string; subtitle: str
 ];
 const targetAudienceKeys = targetAudienceOptions.map((option) => option.key);
 const CONTENT_BUBBLE_COLORS = ["#f7c6c7", "#f8d9a6", "#dcebb7", "#bfe3df", "#c8d9f0", "#d9ccf0", "#f1c7df", "#d8d3c3"];
-const UVM_ITEMS = [
-  { id: 1, title: "Bildungsgangerfolg", description: "Platzhalter: Erläuterung zum Bildungsgangerfolg und seiner Bedeutung für die Unterrichtsvorbereitung.", x: 50, y: 16.2 },
-  { id: 2, title: "Sache / Inhalte", description: "Platzhalter: Erläuterung zur fachlichen Sache, zum Unterrichtsgegenstand und zur didaktischen Auswahl.", x: 92.2, y: 83.4 },
-  { id: 3, title: "Schüler", description: "Platzhalter: Erläuterung zu Lernvoraussetzungen, Perspektiven und Bedingungen der Lernenden.", x: 50, y: 70.6 },
-  { id: 4, title: "Lehrer", description: "Platzhalter: Erläuterung zur Rolle der Lehrkraft, zur Steuerung und Begleitung des Lernprozesses.", x: 8.8, y: 83.4 },
-  { id: 5, title: "Ziele", description: "Platzhalter: Erläuterung zur Zielklärung und zur kompetenzorientierten Ausrichtung der Stunde.", x: 77.7, y: 36.1 },
-  { id: 6, title: "Methoden", description: "Platzhalter: Erläuterung zur methodischen Gestaltung und zur Passung von Lernweg und Ziel.", x: 76, y: 59.1 },
-  { id: 7, title: "Medien", description: "Platzhalter: Erläuterung zum Einsatz von Medien, Materialien und Werkzeugen im Lernprozess.", x: 24.2, y: 59.1 },
-  { id: 8, title: "Raum", description: "Platzhalter: Erläuterung zu räumlichen Bedingungen, Lernorten und Arbeitsumgebungen.", x: 11.5, y: 45.9 },
-  { id: 9, title: "Zeit", description: "Platzhalter: Erläuterung zur zeitlichen Struktur, Taktung und Lernzeit der Unterrichtseinheit.", x: 20.9, y: 36.7 },
-  { id: 10, title: "Lernergebnisse", description: "Platzhalter: Erläuterung zu erwarteten, beobachtbaren Lernergebnissen und deren Sicherung.", x: 39.7, y: 31.5 },
+const competenceModelItems = [
+  {
+    key: "competence",
+    title: "Kompetenz",
+    subtitle: "Zentrum",
+    description: "Kompetenz meint die Fähigkeit und Bereitschaft, Anforderungen sachgerecht, reflektiert und verantwortlich zu bewältigen.",
+    meaning: "Unterricht zielt damit nicht nur auf Wissen, sondern auf verfügbares Handeln in konkreten Situationen.",
+    example: "Lernende erklären eine fachliche Entscheidung, führen sie sachgerecht aus und können ihr Vorgehen verantworten.",
+    questions: ["Welche Anforderung sollen die Lernenden bewältigen?", "Wird mehr sichtbar als reines Wiedergeben?"],
+    group: "center",
+  },
+  {
+    key: "fach",
+    title: "Fachkompetenz",
+    subtitle: "Umgang mit Sachen",
+    description: "Fachkompetenz richtet sich auf fachliche Gegenstände, Aufgaben, Verfahren und berufliche Probleme.",
+    meaning: "Sie hilft, Inhalte nicht als Stoffliste, sondern als Grundlage für fachlich begründetes Handeln zu planen.",
+    example: "Lernende wählen ein geeignetes Verfahren aus und begründen die Auswahl fachlich.",
+    questions: ["Welche fachliche Sache muss verstanden werden?", "Welche fachliche Entscheidung sollen Lernende begründen können?"],
+    group: "area",
+  },
+  {
+    key: "sozial",
+    title: "Sozialkompetenz",
+    subtitle: "Umgang mit anderen",
+    description: "Sozialkompetenz betrifft Kommunikation, Zusammenarbeit, Abstimmung und gemeinsame Verantwortung.",
+    meaning: "Sie wird wichtig, wenn berufliche Aufgaben kooperativ, adressatenbezogen oder kommunikativ gelöst werden müssen.",
+    example: "Lernende stimmen Arbeitsschritte im Team ab und gehen sachlich mit unterschiedlichen Vorschlägen um.",
+    questions: ["Wo braucht die Situation Abstimmung oder Kommunikation?", "Wie wird Zusammenarbeit beobachtbar?"],
+    group: "area",
+  },
+  {
+    key: "selbst",
+    title: "Selbstkompetenz",
+    subtitle: "Umgang mit sich selbst",
+    description: "Selbstkompetenz beschreibt Selbstständigkeit, Zuverlässigkeit, Reflexion und persönliche Verantwortung.",
+    meaning: "Sie zeigt sich darin, dass Lernende ihr Vorgehen steuern, prüfen und aus Rückmeldungen lernen.",
+    example: "Lernende kontrollieren ihr Ergebnis eigenständig und leiten Verbesserungen ab.",
+    questions: ["Wo übernehmen Lernende Verantwortung für ihr Vorgehen?", "Welche Reflexion ist für die Handlung nötig?"],
+    group: "area",
+  },
+  {
+    key: "wissen",
+    title: "Wissen",
+    subtitle: "Verstehen",
+    description: "Wissen umfasst Begriffe, Regeln, Prinzipien und Zusammenhänge, die professionelles Handeln begründbar machen.",
+    meaning: "Es soll nicht isoliert abgefragt werden, sondern für berufliche Aufgaben nutzbar sein.",
+    example: "Lernende erklären, warum Sicherheitsvorschriften in der konkreten Arbeitssituation erforderlich sind.",
+    questions: ["Welches Wissen benötigen die Lernenden für die Anforderung?", "Wird dieses Wissen später zum Begründen genutzt?"],
+    group: "dimension",
+  },
+  {
+    key: "koennen",
+    title: "Können",
+    subtitle: "Handeln",
+    description: "Können beschreibt die Fähigkeit, Wissen anzuwenden, Verfahren auszuführen und Probleme zunehmend selbstständig zu bearbeiten.",
+    meaning: "Unterricht sollte Gelegenheiten schaffen, in denen Lernende fachgerecht handeln und ihr Handeln auswerten.",
+    example: "Lernende wählen ein Prüfverfahren aus, führen es sachgerecht durch und werten das Ergebnis aus.",
+    questions: ["Welche Handlung sollen die Lernenden ausführen können?", "Woran wird zunehmende Selbstständigkeit sichtbar?"],
+    group: "dimension",
+  },
+  {
+    key: "wollen",
+    title: "Wollen",
+    subtitle: "Verantworten",
+    description: "Wollen umfasst Bereitschaft, Haltung, Motivation und Werte, damit Wissen und Können verantwortlich eingesetzt werden.",
+    meaning: "Es macht sichtbar, dass berufliches Handeln auch Sorgfalt, Verantwortung und Urteilskraft benötigt.",
+    example: "Lernende berücksichtigen Sicherheitsanforderungen nicht nur auf Anweisung, sondern übernehmen selbst Verantwortung.",
+    questions: ["Welche Haltung ist für die Handlung notwendig?", "Wo übernehmen Lernende Verantwortung?"],
+    group: "dimension",
+  },
+  {
+    key: "situation",
+    title: "Anforderungssituation",
+    subtitle: "Anwendung",
+    description: "Kompetenz zeigt sich bei der Bewältigung konkreter beruflicher, gesellschaftlicher oder privater Anforderungen.",
+    meaning: "Die Situation gibt dem Lernen Sinn und macht sichtbar, welches Wissen, Können und Wollen gebraucht wird.",
+    example: "Ein Kundenauftrag, eine Störung oder ein Qualitätsproblem wird zum Anlass für fachliches Lernen.",
+    questions: ["Ist die Ausgangslage beruflich bedeutsam?", "Eröffnet sie echte Denk- und Handlungsspielräume?"],
+    group: "frame",
+  },
+  {
+    key: "muendigkeit",
+    title: "Mündigkeit",
+    subtitle: "Bildungsziel",
+    description: "Mündigkeit meint selbstständiges, urteilsfähiges, verantwortliches und mitgestaltendes Handeln.",
+    meaning: "Sie bildet den langfristigen Bildungsanspruch kompetenzorientierten Unterrichts.",
+    example: "Lernende treffen fachlich begründete Entscheidungen und können deren Folgen reflektieren.",
+    questions: ["Wie unterstützt die Stunde eigenverantwortliches Handeln?", "Wo wird Urteilsfähigkeit angebahnt?"],
+    group: "goal",
+  },
 ] as const;
+const hkmModelAreas: { key: CompetencyArea; title: string; subtitle: string; description: string }[] = [
+  { key: "fach", title: "Fachkompetenz", subtitle: "Umgang mit der Sache", description: "Fachliche Anforderungen verstehen, begründen und sachgerecht in beruflichen Anforderungssituationen bearbeiten." },
+  { key: "sozial", title: "Sozialkompetenz", subtitle: "Umgang mit anderen", description: "Kommunizieren, kooperieren, Perspektiven berücksichtigen und gemeinsame Verantwortung für Handlungsergebnisse übernehmen." },
+  { key: "selbst", title: "Selbstkompetenz", subtitle: "Umgang mit sich selbst", description: "Eigenständig, reflektiert und verantwortlich mit Anforderungen, Fehlern, Unsicherheit und dem eigenen Lernprozess umgehen." },
+];
+const hkmModelDimensions: { key: CompetencyDimension; title: string; code: string; description: string }[] = [
+  { key: "wissen", title: "Wissen", code: "A", description: "Begriffe, Regeln und Zusammenhänge verfügbar machen, damit Handeln verstanden und begründet werden kann." },
+  { key: "koennen", title: "Können", code: "B", description: "Verfahren, Strategien und Handlungen fachgerecht ausführen, übertragen, prüfen und verbessern." },
+  { key: "wollen", title: "Wollen", code: "C", description: "Bereitschaft, Verantwortung, Haltung und Wertbezug so entwickeln, dass Handeln getragen und verantwortet wird." },
+];
+const hkmModelLevels: { value: number; title: string; description: string }[] = [
+  { value: 1, title: "Stufe 1", description: "Grundlagen aufnehmen, wiedergeben, wahrnehmen oder angeleitet nachmachen." },
+  { value: 2, title: "Stufe 2", description: "Zusammenhänge erklären, einüben, reagieren und Vorgehen zunehmend sichern." },
+  { value: 3, title: "Stufe 3", description: "Bekanntes auf neue berufliche Situationen übertragen, begründen und verfeinern." },
+  { value: 4, title: "Stufe 4", description: "Komplexe Situationen selbstständig, verantwortungsbewusst und problemlösend bewältigen." },
+];
 const learnerGroupFactors = [
   { key: "large-heterogeneity", label: "Große Leistungsheterogenität" },
   { key: "different-companies", label: "Unterschiedliche Ausbildungsbetriebe" },
@@ -121,25 +219,179 @@ const consequenceSuggestions: Record<string, string[]> = {
   "hearing-impairment": ["Sichtkontakt beim Sprechen sicherstellen", "Arbeitsaufträge schriftlich bereitstellen", "Störgeräusche reduzieren"],
   "physical-limitation": ["Arbeitsplatz und Wege prüfen", "Materialzugang sicherstellen", "Alternative Handlungsformen ermöglichen"],
 };
-const USM_ITEMS = [
-  { id: 1, title: "Mündigkeit", description: "Leitperspektive: Unterricht soll Lernende zu fachlich begründetem, selbstständigem und verantwortlichem Handeln befähigen." },
-  { id: 2, title: "Bildungsgangerfolg", description: "Perspektive auf den Bildungsgang: Wie trägt die Stunde langfristig zum erfolgreichen Lernen und Handeln im Bildungsgang bei?" },
-  { id: 3, title: "Lernergebnisse", description: "Welche beobachtbaren Ergebnisse sollen am Ende sichtbar sein - fachlich, methodisch, sozial oder personal?" },
-  { id: 4, title: "Ziele", description: "Welche kompetenzorientierten Zielsetzungen strukturieren Auswahl, Lernweg und Ergebnissicherung?" },
-  { id: 5, title: "Inhalte / Sache", description: "Welche fachliche Sache steht im Mittelpunkt und wie wird sie didaktisch reduziert, strukturiert und zugänglich gemacht?" },
-  { id: 6, title: "Schüler", description: "Welche Lernvoraussetzungen, Interessen, Erfahrungen und Unterstützungsbedarfe der Lernenden sind für die Planung relevant?" },
-  { id: 7, title: "Lehrer", description: "Welche Rolle, Impulse, Diagnose- und Unterstützungsleistungen übernimmt die Lehrkraft im Lernprozess?" },
-  { id: 8, title: "Medien", description: "Welche Medien, Werkzeuge, Materialien oder digitalen Hilfen unterstützen Verstehen, Handeln und Sicherung?" },
-  { id: 9, title: "Methoden", description: "Welche Lern- und Arbeitsformen passen zur beruflichen Handlung, zum Ziel und zur Lerngruppe?" },
-  { id: 10, title: "Raum", description: "Welche räumlichen Bedingungen, Arbeitsplätze oder Lernorte beeinflussen den Unterricht?" },
-  { id: 11, title: "Zeit", description: "Wie werden Lernzeit, Phasen, Taktung und Übergänge so geplant, dass Lernen möglich bleibt?" },
+
+const observableGoalVerbs = [
+  "beschreiben", "erklären", "begründen", "anwenden", "auswählen", "planen", "durchführen",
+  "prüfen", "bewerten", "reflektieren", "entscheiden", "entwickeln", "dokumentieren", "präsentieren",
+  "vergleichen", "einordnen", "analysieren", "konstruieren", "optimieren",
 ];
+
+const dimensionFormulationHints: Record<CompetencyDimension, { focus: string; starters: string[] }> = {
+  wissen: {
+    focus: "Wissen zielt auf fachliches Verstehen, Einordnen und Begründen.",
+    starters: ["Fachbegriffe sachgerecht verwenden", "Zusammenhänge erklären", "Regeln auf die Situation beziehen"],
+  },
+  koennen: {
+    focus: "Können macht sichtbar, wie Lernende fachgerecht handeln oder ein Verfahren anwenden.",
+    starters: ["Arbeitsschritte planen und ausführen", "Entscheidungen begründen", "Ergebnisse prüfen und verbessern"],
+  },
+  wollen: {
+    focus: "Wollen fokussiert verantwortliches, wertorientiertes und qualitätsbewusstes Handeln.",
+    starters: ["Verantwortung übernehmen", "Qualitätsmaßstäbe beachten", "Folgen des eigenen Handelns reflektieren"],
+  },
+};
+
+const areaFormulationHints: Record<CompetencyArea, string> = {
+  fach: "Fachkompetenz: Umgang mit der Sache – fachlich richtig, begründet und beruflich anschlussfähig.",
+  selbst: "Selbstkompetenz: Umgang mit sich selbst – eigenständig, reflektiert und lernbereit handeln.",
+  sozial: "Sozialkompetenz: Umgang mit anderen – kooperieren, kommunizieren und gemeinsam Verantwortung tragen.",
+};
+
+const levelFocusHints: Record<number, string> = {
+  1: "Stufe 1: wiedergeben, wahrnehmen oder nachmachen – Grundlagen sichtbar machen.",
+  2: "Stufe 2: erklären, einüben oder reagieren – Strukturen verstehen und angeleitet handeln.",
+  3: "Stufe 3: anwenden, verfeinern oder Position beziehen – Transfer und begründete Entscheidungen ermöglichen.",
+  4: "Stufe 4: Problemlösung, souveränes Handeln und verantwortliche Bewertung – komplex und selbstständig agieren.",
+};
+
+const planningFieldHelps = {
+  globalGoal: {
+    title: "Hilfe zum Globalziel",
+    phase: "Grobplanung",
+    purpose: "Das Globalziel bündelt, welches beruflich bedeutsame Können am Ende der Einheit sichtbar werden soll.",
+    questions: ["In welcher Situation handeln die Lernenden?", "Welcher Inhalt oder Gegenstand steht im Mittelpunkt?", "Woran kann man das Lernen beobachten?"],
+    pitfalls: ["nur ein Thema statt eines beobachtbaren Handelns nennen", "zu viele Ziele in einen Satz packen", "Methoden mit Zielen verwechseln"],
+    tips: ["Situation, Inhalt und Verhalten knapp verbinden.", "Ein starkes Verb macht das Ziel prüf- und beobachtbar.", "Wissen, Können und Wollen können gemeinsam vorkommen."],
+  },
+  competencyNeed: {
+    title: "Hilfe zum Kompetenzbedarf",
+    phase: "Analyse",
+    purpose: "Hier wird geklärt, welche Kompetenzfelder aus der beruflichen Anforderung besonders bedeutsam werden.",
+    questions: ["Welche fachliche, personale oder soziale Herausforderung steckt in der Situation?", "Geht es vorrangig um Wissen, Können oder Wollen?", "Welche Stufe passt zum Anspruch der Stunde?"],
+    pitfalls: ["alle Felder markieren", "Kompetenzstufen ohne Bezug zur Aufgabe wählen", "Zielformulierung und Methode vermischen"],
+    tips: ["Wähle wenige tragende Kompetenzfelder.", "Formuliere anschließend konkret, was Lernende auf der Stufe zeigen sollen."],
+  },
+  learningContent: {
+    title: "Hilfe zu Lerninhalten",
+    phase: "Analyse",
+    purpose: "Die Inhaltsanalyse hilft, fachliche Inhalte auszuwählen, zu ordnen und auf den beruflichen Handlungsanlass zu beziehen.",
+    questions: ["Was ist fachlich unverzichtbar?", "Was kann reduziert oder später vertieft werden?", "Welche Inhalte tragen direkt zum Ziel bei?"],
+    pitfalls: ["Stoffsammlung ohne Auswahl", "Inhalte ohne Bezug zur Handlungssituation", "zu viele Begriffe für eine Stunde"],
+    tips: ["Ordne Inhalte räumlich oder bündle sie nach Funktion.", "Markiere Kerninhalte anders als Vertiefungen."],
+  },
+  prerequisites: {
+    title: "Hilfe zu Lernvoraussetzungen",
+    phase: "Analyse",
+    purpose: "Die Adressatenanalyse übersetzt Beobachtungen zur Lerngruppe in konkrete didaktische Konsequenzen.",
+    questions: ["Was können die Lernenden bereits?", "Was könnte den Lernprozess erschweren?", "Welche Konsequenzen ergeben sich für Aufgaben, Sprache, Sozialform oder Unterstützung?"],
+    pitfalls: ["Defizite sammeln, ohne Konsequenzen abzuleiten", "Einzelfälle verallgemeinern", "Vorwissen überschätzen"],
+    tips: ["Formuliere am Ende konkrete Konsequenzen für die Planung.", "Wähle nur Aspekte, die die Stunde tatsächlich beeinflussen."],
+  },
+  flow: {
+    title: "Hilfe zum Unterrichtsverlaufplan",
+    phase: "Feinplanung",
+    purpose: "Der Verlauf verbindet Ziel, Inhalt, Lehr- und Lernhandlungen, Methoden, Medien und Zeit zu einem stimmigen Lernweg.",
+    questions: ["Passt jede Phase zum Ziel?", "Ist sichtbar, was Lehrkraft und Lernende tun?", "Sind Übergänge und Sicherungen klar?"],
+    pitfalls: ["Methoden ohne Zielbezug", "zu knappe Zeitansätze", "fehlende Sicherung oder Reflexion"],
+    tips: ["Plane von den erwarteten Lernergebnissen her.", "Prüfe, ob Zeit, Methode und Medien das Ziel unterstützen."],
+  },
+} as const;
+const learningSituationReflectionItems = [
+  {
+    id: "professional-situation",
+    title: "Beruflicher Anlass",
+    prompt: "Wird deutlich, welche beruflich bedeutsame Ausgangslage die Lernenden bearbeiten?",
+    hint: "Die Situation sollte mehr sein als ein Thema: Sie braucht einen nachvollziehbaren Anlass aus Arbeit, Technik, Kunde, Qualität, Sicherheit oder Prozess.",
+  },
+  {
+    id: "decision-space",
+    title: "Handlungs- und Entscheidungsspielraum",
+    prompt: "Müssen Lernende deuten, auswählen, abwägen oder begründen - oder folgen sie nur fertigen Schritten?",
+    hint: "Kompetenz zeigt sich besonders dort, wo nicht alles vorentschieden ist und Lernende fachlich begründet handeln müssen.",
+  },
+  {
+    id: "competency-demand",
+    title: "Kompetenzanforderung",
+    prompt: "Ist erkennbar, welches Wissen, Können und Wollen fachlich, sozial oder personal aufgebaut wird?",
+    hint: "Eine gute Lernsituation verbindet fachliche Anforderungen mit überfachlichen Anteilen wie Verantwortung, Kooperation oder Selbststeuerung.",
+  },
+  {
+    id: "learning-action",
+    title: "Lernhandlung statt bloßer Ausführung",
+    prompt: "Wird das berufliche Handeln mit Verstehen, Begründen, Reflektieren und Systematisieren verbunden?",
+    hint: "Die Lernenden sollen nicht nur etwas erledigen, sondern nachvollziehen, warum und wie ihr Handeln fachlich sinnvoll ist.",
+  },
+  {
+    id: "scaffolding",
+    title: "Unterstützung und Öffnung",
+    prompt: "Sind Hilfen, Materialien und Impulse passend dosiert und wird der Handlungsspielraum wieder geöffnet?",
+    hint: "Struktur darf entlasten, sollte aber nicht dauerhaft alles vorgeben. Ziel bleibt zunehmend selbstständiges Situationshandeln.",
+  },
+  {
+    id: "conditions",
+    title: "Lernbedingungen",
+    prompt: "Passen Aufträge, Medien, Raum, Zeit, Rückmeldungen und Unterstützungen zur Lernsituation?",
+    hint: "Die Gestaltung soll Lernen wahrscheinlicher machen: klar, zugänglich, aber nicht unnötig geschlossen.",
+  },
+  {
+    id: "transfer",
+    title: "Sicherung und Transfer",
+    prompt: "Werden Ergebnisse gesichert, fachlich geordnet und auf veränderte Fälle übertragbar gemacht?",
+    hint: "Erst durch Sicherung, Reflexion und Transfer wird aus situativer Aufgabenlösung verfügbare Kompetenz.",
+  },
+  {
+    id: "sustainable-competence",
+    title: "Nachhaltige Kompetenzentwicklung",
+    prompt: "Zielt die Lernsituation über die einzelne Aufgabe hinaus auf begründetes und verantwortliches Handeln?",
+    hint: "Die Reflexion fragt nicht nach einer Note, sondern danach, ob die Lernsituation langfristige Handlungsfähigkeit anbahnt.",
+  },
+] as const;
+const USM_ITEMS = [
+  { id: 1, title: "Mündigkeit", short: "Mündigkeit", description: "Langfristiges Ziel beruflicher Bildung: Lernende sollen eigenverantwortlich, fachlich begründet und verantwortungsbewusst handeln können.", question: "Wie unterstützt die Stunde selbstständiges und verantwortliches Handeln?", x: 50, y: 7, tone: "maturity", layer: "Übergeordnete Zielebene" },
+  { id: 2, title: "Bildungserfolg", short: "Bildungserfolg", description: "Einzelne Unterrichtseinheiten tragen langfristig zur Kompetenzentwicklung bei. Bildungserfolg meint mehr als kurzfristige Leistung.", question: "Welchen Beitrag leistet die Stunde zum langfristigen Kompetenzaufbau?", x: 50, y: 20, tone: "success", layer: "Ergebnisebene" },
+  { id: 3, title: "Lernergebnisse", short: "Lernergebnisse", description: "Lernergebnisse machen sichtbar, welche Kompetenzen am Ende beobachtbar geworden sind.", question: "Woran erkennst du, dass Lernen tatsächlich stattgefunden hat?", x: 50, y: 34, tone: "planning", layer: "Planungsebene" },
+  { id: 4, title: "Ziele", short: "Ziele", description: "Ziele klären, welche Kompetenzen aufgebaut werden sollen. Sie steuern Inhalte, Methoden, Medien und Ergebnissicherung.", question: "Welche Kompetenz soll am Ende in der beruflichen Situation sichtbar werden?", x: 71, y: 43, tone: "planning", layer: "Planungsebene" },
+  { id: 5, title: "Inhalte", short: "Inhalte", description: "Inhalte werden danach ausgewählt, ob sie zur Kompetenzentwicklung in der beruflichen Anforderung beitragen.", question: "Was ist wesentlich, was kann reduziert oder später vertieft werden?", x: 73, y: 53, tone: "planning", layer: "Planungsebene" },
+  { id: 6, title: "Methoden", short: "Methoden", description: "Methoden unterstützen aktive Kompetenzentwicklung, wenn sie zum Ziel, zur Lerngruppe und zur beruflichen Handlung passen.", question: "Welche Lernhandlung ermöglicht Verstehen, Begründen, Üben oder Transfer?", x: 62, y: 62, tone: "planning", layer: "Planungsebene" },
+  { id: 7, title: "Medien", short: "Medien", description: "Analoge und digitale Medien sollen Verstehen, Handeln, Zusammenarbeit oder selbstständiges Lernen sinnvoll unterstützen.", question: "Welches Medium hilft wirklich beim Lernen - und nicht nur bei der Darstellung?", x: 38, y: 62, tone: "planning", layer: "Planungsebene" },
+  { id: 8, title: "Raum", short: "Raum", description: "Die Lernumgebung beeinflusst Kommunikation, Zusammenarbeit und Handlungsmöglichkeiten. Raum kann Lernen aktiv fördern.", question: "Wie muss der Lernort gestaltet sein, damit Handlung und Austausch gelingen?", x: 27, y: 53, tone: "planning", layer: "Planungsebene" },
+  { id: 9, title: "Zeit", short: "Zeit", description: "Verfügbare Unterrichtszeit beeinflusst Zielauswahl, Methodik, Lernaufgaben, Übungsanteile und Reflexion.", question: "Reicht die Zeit für Erarbeiten, Handeln, Sichern und Reflektieren?", x: 29, y: 43, tone: "planning", layer: "Planungsebene" },
+  { id: 10, title: "Lehr-Lern-Arrangement", short: "Lehr-Lern-Arrangement", description: "Im Zentrum greifen Ziele, Inhalte, Methoden, Medien, Raum und Zeit zu einer stimmigen Lernumgebung zusammen.", question: "Passen alle Entscheidungen so zusammen, dass Kompetenzentwicklung wahrscheinlicher wird?", x: 50, y: 52, tone: "communication", layer: "Zentrum der Planungsebene" },
+  { id: 11, title: "Lehrende", short: "Lehrende", description: "Die Lehrkraft gestaltet Lernbedingungen, gibt Impulse, unterstützt, diagnostiziert und begleitet Kompetenzentwicklung.", question: "Welche Rolle übernimmt die Lehrkraft: anleiten, begleiten, klären, herausfordern?", x: 24, y: 82, tone: "foundation", layer: "Pädagogisch-didaktisches Dreieck" },
+  { id: 12, title: "Lernende", short: "Lernende", description: "Schülerinnen und Schüler übernehmen eine aktive Rolle: Sie deuten, handeln, begründen, reflektieren und lernen zunehmend eigenverantwortlich.", question: "Wo handeln die Lernenden selbstständig und wo brauchen sie Unterstützung?", x: 50, y: 73, tone: "foundation", layer: "Pädagogisch-didaktisches Dreieck" },
+  { id: 13, title: "Gegenstand", short: "Gegenstand", description: "Der fachliche Lerngegenstand ist beruflich verankert und bildet den Ausgangspunkt für kompetenzorientierte Lernprozesse.", question: "Welche Sache muss verstanden werden, damit berufliches Handeln begründet gelingt?", x: 76, y: 82, tone: "foundation", layer: "Pädagogisch-didaktisches Dreieck" },
+  { id: 14, title: "Kommunikation", short: "Kommunikation", description: "Kommunikation verbindet Lehrende, Lernende und Gegenstand. Interaktion, Feedback und Zusammenarbeit prägen die Lernkultur.", question: "Wie werden Austausch, Feedback und Verständigung lernwirksam organisiert?", x: 50, y: 79, tone: "communication", layer: "Bindeglied" },
+] as const;
 
 const addMinutes = (time: string, minutes: number) => {
   if (!/^\d{2}:\d{2}$/.test(time)) return "—";
   const [h = 0, m = 0] = time.split(":").map(Number);
   const total = h * 60 + m + minutes;
   return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+
+const sentenceEnd = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+};
+
+const buildGoalSuggestion = (assistant: Plan["goalAssistant"]) => {
+  const situation = assistant.situation.trim();
+  const content = assistant.content.trim();
+  const behavior = assistant.behavior.trim();
+  if (!situation && !content && !behavior) return "";
+  const parts = [
+    situation ? `in der beruflichen Situation „${situation}“` : "",
+    content ? `unter Einbezug von ${content}` : "",
+    behavior || "ein beobachtbares, kompetenzorientiertes Verhalten zeigen",
+  ].filter(Boolean);
+  return sentenceEnd(`Die Schülerinnen und Schüler können ${parts.join(" ")}`);
+};
+
+const hasObservableVerb = (text: string) => {
+  const lower = text.toLowerCase();
+  return observableGoalVerbs.some((verb) => lower.includes(verb));
 };
 
 const preparePdfPreview = async (file: File) => {
@@ -230,6 +482,11 @@ const buildPrerequisiteConsequencesSummary = (prerequisites: Plan["learningPrere
   return [...blocks, groupOther, specialOther].filter(Boolean).join("\n\n");
 };
 
+const resizeTextareaToContent = (element: HTMLTextAreaElement) => {
+  element.style.height = "auto";
+  element.style.height = `${element.scrollHeight}px`;
+};
+
 const parseCompetencyFieldId = (fieldId: string): { area: CompetencyArea; dimension: CompetencyDimension } | null => {
   const [area, dimension] = fieldId.split("-") as [CompetencyArea, CompetencyDimension];
   if (!areas.some((item) => item.key === area) || !dimensions.some((item) => item.key === dimension)) return null;
@@ -250,12 +507,14 @@ const buildCompetencyNeedSummary = (analysis: CompetencyNeedAnalysis) => {
     const clarifications = [...entry.selectedClarifications, entry.customClarification.trim()].filter(Boolean);
     const consequences = [...entry.selectedConsequences, entry.customConsequence.trim()].filter(Boolean);
     const levels = (analysis.selectedLevels[fieldId] ?? []).filter((level) => level >= 1 && level <= 4);
+    const level = levels[0];
     const lines = [
-      `Kompetenzfeld: ${competencyFieldLabel(fieldId)}`,
-      levels.length ? `Niveaustufen: ${levels.join(", ")}` : "",
+      `${competencyFieldLabel(fieldId)}${level ? ` - Stufe ${level}` : ""}`,
+      entry.levelGoal.trim() ? entry.levelGoal.trim() : "",
+      entry.levelDescription.trim() ? `Eigene Beschreibung der Stufe:\n${entry.levelDescription.trim()}` : "",
       entry.demand.trim() ? `Kompetenzbedarf: ${entry.demand.trim()}` : "",
       clarifications.length ? `Konkretisierung:\n${clarifications.map((item) => `- ${item}`).join("\n")}` : "",
-      consequences.length ? `Konsequenzen für den Unterricht:\n${consequences.map((item) => `- ${item}`).join("\n")}` : "",
+      consequences.length ? `Konsequenz für den Unterricht:\n${consequences.map((item) => `- ${item}`).join("\n")}` : "",
     ].filter(Boolean);
     return lines.length > 1 ? [lines.join("\n")] : [];
   });
@@ -275,7 +534,7 @@ const normalizeCompetencyNeedAnalysis = (value: unknown): CompetencyNeedAnalysis
       const next = Array.isArray(levels)
         ? levels.map(Number).filter((level) => Number.isInteger(level) && level >= 1 && level <= 4)
         : [];
-      return [[fieldId, Array.from(new Set(next))]];
+      return [[fieldId, Array.from(new Set(next)).slice(0, 1)]];
     })) as CompetencyNeedAnalysis["selectedLevels"]
     : fallback.selectedLevels;
   const entries = partial.entries && typeof partial.entries === "object" && !Array.isArray(partial.entries)
@@ -284,6 +543,8 @@ const normalizeCompetencyNeedAnalysis = (value: unknown): CompetencyNeedAnalysis
       const entry = rawEntry as Partial<CompetencyNeedEntry>;
       const normalizedEntry: CompetencyNeedEntry = {
         demand: typeof entry.demand === "string" ? entry.demand : "",
+        levelGoal: typeof entry.levelGoal === "string" ? entry.levelGoal : typeof entry.demand === "string" ? entry.demand : "",
+        levelDescription: typeof entry.levelDescription === "string" ? entry.levelDescription : "",
         selectedClarifications: Array.isArray(entry.selectedClarifications) ? entry.selectedClarifications.filter((item): item is string => typeof item === "string") : [],
         customClarification: typeof entry.customClarification === "string" ? entry.customClarification : "",
         selectedConsequences: Array.isArray(entry.selectedConsequences) ? entry.selectedConsequences.filter((item): item is string => typeof item === "string") : [],
@@ -353,6 +614,20 @@ const normalizePlan = (candidate: unknown): Plan => {
         toSide: isBubbleSide(connection.toSide) ? connection.toSide : undefined,
       })).filter((connection) => connection.fromId && connection.toId && connection.fromId !== connection.toId)
       : fallback.contentConnections,
+    goalAssistant: {
+      ...fallback.goalAssistant,
+      ...(partial.goalAssistant ?? {}),
+      situation: typeof partial.goalAssistant?.situation === "string" ? partial.goalAssistant.situation : fallback.goalAssistant.situation,
+      content: typeof partial.goalAssistant?.content === "string" ? partial.goalAssistant.content : fallback.goalAssistant.content,
+      behavior: typeof partial.goalAssistant?.behavior === "string" ? partial.goalAssistant.behavior : fallback.goalAssistant.behavior,
+      notes: typeof partial.goalAssistant?.notes === "string" ? partial.goalAssistant.notes : fallback.goalAssistant.notes,
+    },
+    learningSituationChecks: partial.learningSituationChecks && typeof partial.learningSituationChecks === "object" && !Array.isArray(partial.learningSituationChecks)
+      ? Object.fromEntries(Object.entries(partial.learningSituationChecks).map(([key, entry]) => {
+        const value = entry && typeof entry === "object" ? entry as { checked?: unknown; notes?: unknown } : {};
+        return [key, { checked: Boolean(value.checked), notes: typeof value.notes === "string" ? value.notes : "" }];
+      }))
+      : fallback.learningSituationChecks,
     preparation: { ...fallback.preparation, ...(partial.preparation ?? {}) },
     criteriaChecks: { ...fallback.criteriaChecks, ...(partial.criteriaChecks ?? {}) },
     phases: partial.phases.map((phase, index) => {
@@ -385,7 +660,75 @@ const readStoredPlan = (): Plan => {
   } catch { return initialPlan(); }
 };
 
+function AccessGate({
+  value,
+  error,
+  onChange,
+  onSubmit,
+}: {
+  value: string;
+  error: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <main className="grid min-h-screen place-items-center bg-paper px-4 py-10 text-ink">
+      <section className="w-full max-w-md overflow-hidden rounded-[2rem] border border-ink/10 bg-white shadow-soft">
+        <div className="bg-gradient-to-br from-white via-sky/10 to-clay/5 px-6 pb-5 pt-7 text-center">
+          <img src={SEMINAR_LOGO} alt="Seminar Metalltechnik" className="mx-auto h-24 w-auto max-w-[320px] object-contain" />
+          <h1 className="mt-5 font-display text-3xl font-bold text-moss">UVP Studio</h1>
+          <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/55">Digitale Unterrichtsplanung für die berufliche Lehrerbildung</p>
+        </div>
+        <form
+          className="grid gap-4 px-6 py-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          <p className="text-sm leading-relaxed text-ink/60">Bitte gib den Zugangscode ein, um UVP Studio zu öffnen.</p>
+          <label className="block">
+            <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Zugangscode</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              className="w-full rounded-2xl border border-ink/10 bg-paper/70 px-4 py-3 text-base font-semibold outline-none transition placeholder:text-ink/25 focus:border-moss focus:bg-white"
+              placeholder="Zugangscode eingeben"
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  onSubmit();
+                }
+              }}
+              autoFocus
+            />
+          </label>
+          {error && (
+            <div className="rounded-2xl border border-clay/15 bg-clay/5 px-4 py-3 text-sm font-semibold leading-relaxed text-clay" role="alert">
+              {error}
+            </div>
+          )}
+          <button type="submit" className="rounded-full bg-moss px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-moss/90 focus:outline-none focus:ring-2 focus:ring-moss/35">
+            Zugang öffnen
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
+  const [accessGranted, setAccessGranted] = useState(() => {
+    try {
+      return sessionStorage.getItem(ACCESS_SESSION_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [accessCodeInput, setAccessCodeInput] = useState("");
+  const [accessError, setAccessError] = useState("");
   const [plan, setPlan] = useState<Plan>(readStoredPlan);
   const [selectedId, setSelectedId] = useState(plan.phases[0]?.id ?? "");
   const [matrixOpen, setMatrixOpen] = useState(true);
@@ -401,8 +744,10 @@ export default function App() {
   const [serviceMethodsOpen, setServiceMethodsOpen] = useState(false);
   const [usmOpen, setUsmOpen] = useState(false);
   const [activeUsmItem, setActiveUsmItem] = useState<number | null>(null);
-  const [uvmOpen, setUvmOpen] = useState(false);
-  const [activeUvmItem, setActiveUvmItem] = useState<number | null>(null);
+  const [competenceModelOpen, setCompetenceModelOpen] = useState(false);
+  const [activeCompetenceItem, setActiveCompetenceItem] = useState<string | null>(null);
+  const [hkmOpen, setHkmOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const situationImageRef = useRef<HTMLInputElement>(null);
 
@@ -419,6 +764,11 @@ export default function App() {
   const showCompactOptionalBlocks = !isInServiceMode && (isAdvancedRefMode || compactDetailsOpen);
   const showContentBubbleBoard = isStudentMode || plan.targetAudience === "ref-beginning";
   const showCompactLearningContent = plan.targetAudience === "ref-advanced";
+  const showContextAnalysis = isStudentMode || plan.targetAudience === "ref-beginning";
+  const showCompactContentFrame = isAdvancedRefMode || isInServiceMode;
+  const showDirectResources = isStudentMode || plan.targetAudience === "ref-beginning";
+  const showExtendedOrganization = isStudentMode || plan.targetAudience === "ref-beginning";
+  const useCompactFlowTitle = isInServiceMode || isAdvancedRefMode;
 
   useEffect(() => {
     setSaved(false);
@@ -434,15 +784,17 @@ export default function App() {
   }, [selectedId, isInServiceMode]);
 
   useEffect(() => {
-    if (!criteriaOpen && !verbCatalogOpen && !usmOpen && activeUsmItem == null && !uvmOpen && activeUvmItem == null) return;
+    if (!criteriaOpen && !verbCatalogOpen && !usmOpen && activeUsmItem == null && !competenceModelOpen && activeCompetenceItem == null && !hkmOpen && !aboutOpen) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setCriteriaOpen(false);
       setVerbCatalogOpen(null);
       setUsmOpen(false);
       setActiveUsmItem(null);
-      setUvmOpen(false);
-      setActiveUvmItem(null);
+      setCompetenceModelOpen(false);
+      setActiveCompetenceItem(null);
+      setHkmOpen(false);
+      setAboutOpen(false);
     };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -451,9 +803,62 @@ export default function App() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
     };
-  }, [criteriaOpen, verbCatalogOpen, usmOpen, activeUsmItem, uvmOpen, activeUvmItem]);
+  }, [criteriaOpen, verbCatalogOpen, usmOpen, activeUsmItem, competenceModelOpen, activeCompetenceItem, hkmOpen, aboutOpen]);
+
+  const submitAccessCode = () => {
+    if (accessCodeInput.trim() === APP_ACCESS_CODE) {
+      try {
+        sessionStorage.setItem(ACCESS_SESSION_KEY, "true");
+      } catch {
+        // Sitzungsspeicherung ist eine Komfortfunktion; der Zugang bleibt in diesem Tab trotzdem geöffnet.
+      }
+      setAccessGranted(true);
+      setAccessError("");
+      setAccessCodeInput("");
+      return;
+    }
+    setAccessError("Der Zugangscode stimmt noch nicht. Bitte prüfe die Eingabe und versuche es erneut.");
+  };
+
+  const lockAccess = () => {
+    try {
+      sessionStorage.removeItem(ACCESS_SESSION_KEY);
+    } catch {
+      // Ignorieren, falls sessionStorage im Browser nicht verfügbar ist.
+    }
+    setAccessGranted(false);
+    setAccessCodeInput("");
+    setAccessError("");
+    setMobileNav(false);
+    setCriteriaOpen(false);
+    setVerbCatalogOpen(null);
+    setUsmOpen(false);
+    setActiveUsmItem(null);
+    setCompetenceModelOpen(false);
+    setActiveCompetenceItem(null);
+    setHkmOpen(false);
+    setAboutOpen(false);
+  };
 
   const updatePlan = <K extends keyof Plan>(key: K, value: Plan[K]) => setPlan((old) => ({ ...old, [key]: value }));
+  const updateGoalAssistant = (patch: Partial<Plan["goalAssistant"]>) =>
+    setPlan((old) => ({ ...old, goalAssistant: { ...old.goalAssistant, ...patch } }));
+  const updateLearningSituationCheck = (id: string, patch: Partial<Plan["learningSituationChecks"][string]>) =>
+    setPlan((old) => {
+      const current = old.learningSituationChecks[id] ?? { checked: false, notes: "" };
+      return {
+        ...old,
+        learningSituationChecks: {
+          ...old.learningSituationChecks,
+          [id]: { ...current, ...patch },
+        },
+      };
+    });
+  const applyGoalSuggestion = () => {
+    const suggestion = buildGoalSuggestion(plan.goalAssistant);
+    if (!suggestion) return;
+    setPlan((old) => ({ ...old, globalGoal: suggestion }));
+  };
   const updatePhase = (id: string, patch: Partial<Phase>) =>
     setPlan((old) => ({ ...old, phases: old.phases.map((p) => p.id === id ? { ...p, ...patch } : p) }));
   const updateLearningPrerequisite = <K extends keyof Plan["learningPrerequisites"]>(key: K, value: Plan["learningPrerequisites"][K]) =>
@@ -625,6 +1030,83 @@ export default function App() {
     if (situationImageRef.current) situationImageRef.current.value = "";
   };
 
+  const renderCompactContentFrame = () => (
+    <section className="mt-6 rounded-[2rem] border border-moss/15 bg-white p-5 shadow-soft sm:p-6">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="label">Inhaltliche Ausrichtung</div>
+          <h2 className="font-display text-2xl font-bold">Inhaltliche Rahmenbedingungen</h2>
+          <p className="mt-1 text-sm leading-relaxed text-ink/50">Kompakte Klärung von Thema, beruflichem Handlungsanlass und Ziel der Unterrichtseinheit.</p>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)]">
+        <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4 lg:col-span-2">
+          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Thema / Titel der Lernsituation</span>
+          <input
+            aria-label="Thema / Titel der Lernsituation"
+            className="w-full border-0 border-b border-ink/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-ink/25 focus:border-moss sm:text-3xl"
+            placeholder="Thema oder Titel der Lernsituation"
+            value={plan.topic}
+            onChange={(event) => updatePlan("topic", event.target.value)}
+          />
+        </label>
+        <label className="block rounded-2xl border border-ink/10 bg-paper/60 p-4">
+          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</span>
+          <textarea
+            aria-label="Berufliche Anforderung"
+            className="min-h-[132px] w-full rounded-xl border border-ink/10 bg-white/70 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
+            placeholder="Welche berufliche Anforderung, welcher Auftrag oder welches Problem bildet den Handlungsanlass?"
+            value={plan.situationDescription}
+            onChange={(event) => updatePlan("situationDescription", event.target.value)}
+          />
+        </label>
+        {!isInServiceMode && (
+          <div className="lg:col-span-2">
+            <LearningSituationReflection
+              checks={plan.learningSituationChecks}
+              onUpdate={updateLearningSituationCheck}
+            />
+          </div>
+        )}
+        <label className="block rounded-2xl border border-moss/15 bg-sky/10 p-4">
+          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-moss">Globalziel der Unterrichtseinheit</span>
+          <textarea
+            aria-label="Globalziel der Unterrichtseinheit"
+            className="min-h-[132px] w-full rounded-xl border border-ink/10 bg-white/80 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
+            placeholder="Die Lernenden können …"
+            value={plan.globalGoal}
+            onChange={(event) => updatePlan("globalGoal", event.target.value)}
+          />
+          {!isInServiceMode && (
+            <div className="mt-3 grid gap-2">
+              <FieldHelp {...planningFieldHelps.globalGoal} />
+              <GoalAssistantPanel
+                value={plan.goalAssistant}
+                globalGoal={plan.globalGoal}
+                onChange={updateGoalAssistant}
+                onApply={applyGoalSuggestion}
+              />
+            </div>
+          )}
+        </label>
+      </div>
+    </section>
+  );
+
+  if (!accessGranted) {
+    return (
+      <AccessGate
+        value={accessCodeInput}
+        error={accessError}
+        onChange={(value) => {
+          setAccessCodeInput(value);
+          if (accessError) setAccessError("");
+        }}
+        onSubmit={submitAccessCode}
+      />
+    );
+  }
+
   return (
     <>
       <div className="app-shell flex min-h-screen flex-col bg-paper">
@@ -662,6 +1144,7 @@ export default function App() {
                 <MenuDropdown label="Projekt">
                   <MenuInfo label="Aktueller Planungsstand" value={targetAudienceOptions.find((option) => option.key === plan.targetAudience)?.title ?? "—"} />
                   <MenuItemButton tone="danger" icon={<RotateCcw size={15} />} onClick={resetPlan}>Planung zurücksetzen</MenuItemButton>
+                  <MenuItemButton icon={<X size={15} />} onClick={lockAccess}>Zugang sperren</MenuItemButton>
                   <MenuDivider />
                   <MenuComingSoon>Einstellungen vorbereitet</MenuComingSoon>
                 </MenuDropdown>
@@ -675,11 +1158,10 @@ export default function App() {
                     Kriterien der Prüfungslehrprobe
                     {checkedCriteria > 0 && <span className="ml-auto rounded-full bg-lime px-2 py-0.5 text-[10px] text-ink">{checkedCriteria}/{EXAM_CRITERIA_COUNT}</span>}
                   </MenuItemButton>
-                  <MenuItemButton icon={<Grid3X3 size={15} />} onClick={() => { setUsmOpen(true); setActiveUsmItem(null); }}>Unterrichtsstrukturmodell (USM)</MenuItemButton>
-                  <MenuItemButton icon={<BookOpen size={15} />} onClick={() => { setUvmOpen(true); setActiveUvmItem(null); }}>Unterrichtsvorbereitungsmodell (UVM)</MenuItemButton>
+                  <MenuItemButton icon={<BookOpen size={15} />} onClick={() => { setCompetenceModelOpen(true); setActiveCompetenceItem(null); }}>Kompetenzverständnis</MenuItemButton>
+                  <MenuItemButton icon={<Grid3X3 size={15} />} onClick={() => setHkmOpen(true)}>Handlungskompetenzmatrix</MenuItemButton>
+                  <MenuItemButton icon={<LibraryBig size={15} />} onClick={() => { setUsmOpen(true); setActiveUsmItem(null); }}>Unterrichtsstrukturmodell (USM)</MenuItemButton>
                   <MenuDivider />
-                  <MenuComingSoon>Handlungskompetenzmatrix</MenuComingSoon>
-                  <MenuComingSoon>Unterrichtsentwicklungsraum</MenuComingSoon>
                   <MenuComingSoon>Weitere Modelle</MenuComingSoon>
                 </MenuDropdown>
                 <MenuDropdown label="KI">
@@ -691,6 +1173,8 @@ export default function App() {
                   <MenuComingSoon>KI-Unterrichtsentwurf optimieren</MenuComingSoon>
                 </MenuDropdown>
                 <MenuDropdown label="Hilfe">
+                  <MenuItemButton icon={<BookOpen size={15} />} onClick={() => setAboutOpen(true)}>Über UVP Studio</MenuItemButton>
+                  <MenuDivider />
                   <MenuComingSoon>Glossar</MenuComingSoon>
                   <MenuComingSoon>Tutorials</MenuComingSoon>
                   <MenuComingSoon>Hilfeblöcke</MenuComingSoon>
@@ -725,6 +1209,7 @@ export default function App() {
                 <div className="rounded-2xl border border-ink/10 bg-paper/70 p-3">
                   <div className="label">Projekt</div>
                   <button className="icon-btn mt-2 w-full justify-start border-clay/25 text-clay" onClick={resetPlan}><RotateCcw size={16} />Planung zurücksetzen</button>
+                  <button className="icon-btn mt-2 w-full justify-start" onClick={lockAccess}><X size={16} />Zugang sperren</button>
                 </div>
                 <div className="rounded-2xl border border-ink/10 bg-paper/70 p-3">
                   <div className="label">Datei</div>
@@ -738,13 +1223,15 @@ export default function App() {
                   <div className="label">Modelle</div>
                   <div className="mt-2 grid gap-2">
                     <button className="icon-btn justify-start" onClick={() => { setCriteriaOpen(true); setMobileNav(false); }}><ClipboardCheck size={16} />Kriterien der Prüfungslehrprobe</button>
-                    <button className="icon-btn justify-start" onClick={() => { setUsmOpen(true); setActiveUsmItem(null); setMobileNav(false); }}><Grid3X3 size={16} />Unterrichtsstrukturmodell (USM)</button>
-                    <button className="icon-btn justify-start" onClick={() => { setUvmOpen(true); setActiveUvmItem(null); setMobileNav(false); }}><BookOpen size={16} />Unterrichtsvorbereitungsmodell (UVM)</button>
-                    <div className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-ink/35">Handlungskompetenzmatrix · Unterrichtsentwicklungsraum vorbereitet</div>
+                    <button className="icon-btn justify-start" onClick={() => { setCompetenceModelOpen(true); setActiveCompetenceItem(null); setMobileNav(false); }}><BookOpen size={16} />Kompetenzverständnis</button>
+                    <button className="icon-btn justify-start" onClick={() => { setHkmOpen(true); setMobileNav(false); }}><Grid3X3 size={16} />Handlungskompetenzmatrix</button>
+                    <button className="icon-btn justify-start" onClick={() => { setUsmOpen(true); setActiveUsmItem(null); setMobileNav(false); }}><LibraryBig size={16} />Unterrichtsstrukturmodell (USM)</button>
+                    <div className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-ink/35">Weitere Modelle vorbereitet</div>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-ink/10 bg-paper/70 p-3">
                   <div className="label">KI & Hilfe</div>
+                  <button className="icon-btn mt-2 w-full justify-start" onClick={() => { setAboutOpen(true); setMobileNav(false); }}><BookOpen size={16} />Über UVP Studio</button>
                   <div className="mt-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-ink/40">KI-Funktionen, Glossar, Tutorials und Versionshinweise: demnächst verfügbar</div>
                 </div>
               </div>
@@ -790,13 +1277,13 @@ export default function App() {
                 <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Unterrichtsbeginn</span>
                 <input type="time" className="w-full bg-transparent text-sm font-semibold outline-none" value={plan.startTime} onChange={(event) => updatePlan("startTime", event.target.value)} />
               </label>
-              {!isInServiceMode && (
+              {showExtendedOrganization && (
               <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4">
                 <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Anzahl der Schülerinnen und Schüler</span>
                 <input className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-ink/25" placeholder="z. B. 24" value={plan.studentCount} onChange={(event) => updatePlan("studentCount", event.target.value)} />
               </label>
               )}
-              {showCoreAnalyses && (
+              {showExtendedOrganization && (
                 <>
                   <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4 lg:col-span-2">
                     <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-ink/45">Zeitlicher Umfang</span>
@@ -810,6 +1297,8 @@ export default function App() {
               )}
             </div>
           </section>
+
+          {showCompactContentFrame && renderCompactContentFrame()}
 
           {!isInServiceMode && (
           <section className="relative mt-6 overflow-hidden rounded-[2.25rem] border border-ink/10 bg-white/70 p-4 text-ink shadow-soft sm:p-6 lg:p-7">
@@ -829,6 +1318,7 @@ export default function App() {
               </div>
 
               <div className="grid gap-3">
+                {showContextAnalysis && (
                 <PlanningAccordion title="Kontextanalyse">
                   <PlanningSubAccordion title="Allgemeine Rahmenbedingungen klären">
                     <div className="grid gap-6">
@@ -913,6 +1403,12 @@ export default function App() {
                           </div>
                         </div>
                         )}
+                        <div className="mb-5">
+                          <LearningSituationReflection
+                            checks={plan.learningSituationChecks}
+                            onUpdate={updateLearningSituationCheck}
+                          />
+                        </div>
                         <label className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">{isInServiceMode ? "Gesamtziel der Unterrichtseinheit" : "Globalziel der Unterrichtseinheit"}</label>
                         <textarea
                           aria-label="Globalziel"
@@ -920,36 +1416,43 @@ export default function App() {
                           placeholder="Die Lernenden können …"
                           value={plan.globalGoal} onChange={(e) => updatePlan("globalGoal", e.target.value)}
                         />
+                        <div className="mt-3 grid gap-2">
+                          <FieldHelp {...planningFieldHelps.globalGoal} />
+                          <GoalAssistantPanel
+                            value={plan.goalAssistant}
+                            globalGoal={plan.globalGoal}
+                            onChange={updateGoalAssistant}
+                            onApply={applyGoalSuggestion}
+                          />
+                        </div>
                       </div>
                     </div>
                   </PlanningSubAccordion>
-                  {showCoreAnalyses && (
+                  {showDirectResources && (
                     <PlanningSubAccordion title="Direkte Vorgaben und Ressourcen berücksichtigen">
-                      {showExtendedBlocks ? (
-                        <div className="grid gap-4 sm:grid-cols-3">
-                          <label className="block">
-                            <span className="label">Bezug zum Lehrplan</span>
-                            <textarea className="field min-h-24" value={plan.curriculumReference} onChange={(event) => updatePlan("curriculumReference", event.target.value)} placeholder="Kompetenzerwartungen, Lernfeld, Lehrplanbezug …" />
-                          </label>
-                          <label className="block">
-                            <span className="label">Didaktische Jahresplanung</span>
-                            <textarea className="field min-h-24" value={plan.annualPlanReference} onChange={(event) => updatePlan("annualPlanReference", event.target.value)} placeholder="Sequenz, Lernfeld, Anschluss …" />
-                          </label>
-                          <label className="block">
-                            <span className="label">Einordnung des Themas</span>
-                            <textarea className="field min-h-24" value={plan.topicPlacement} onChange={(event) => updatePlan("topicPlacement", event.target.value)} placeholder="Warum jetzt? Vorher/Nachher? Bedeutung im Bildungsgang …" />
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-ink/50">Dieser Vertiefungsbereich ist im aktuellen Planungsstand reduziert.</div>
-                      )}
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <label className="block">
+                          <span className="label">Bezug zum Lehrplan</span>
+                          <textarea className="field min-h-24" value={plan.curriculumReference} onChange={(event) => updatePlan("curriculumReference", event.target.value)} placeholder="Kompetenzerwartungen, Lernfeld, Lehrplanbezug …" />
+                        </label>
+                        <label className="block">
+                          <span className="label">Didaktische Jahresplanung</span>
+                          <textarea className="field min-h-24" value={plan.annualPlanReference} onChange={(event) => updatePlan("annualPlanReference", event.target.value)} placeholder="Sequenz, Lernfeld, Anschluss …" />
+                        </label>
+                        <label className="block">
+                          <span className="label">Einordnung des Themas</span>
+                          <textarea className="field min-h-24" value={plan.topicPlacement} onChange={(event) => updatePlan("topicPlacement", event.target.value)} placeholder="Warum jetzt? Vorher/Nachher? Bedeutung im Bildungsgang …" />
+                        </label>
+                      </div>
                     </PlanningSubAccordion>
                   )}
                 </PlanningAccordion>
+                )}
 
                 <PlanningAccordion title="Kompetenzorientierte Sachanalyse">
                   {showCoreAnalyses && (
                     <PlanningSubAccordion title="Kompetenzbedarf ermitteln">
+                      <FieldHelp {...planningFieldHelps.competencyNeed} />
                       <CompetencyNeedCoach
                         value={plan.competencyNeedAnalysis}
                         compact={isAdvancedRefMode}
@@ -958,6 +1461,7 @@ export default function App() {
                     </PlanningSubAccordion>
                   )}
                   <PlanningSubAccordion title="Lerninhalte analysieren, strukturieren und auswählen">
+                    <FieldHelp {...planningFieldHelps.learningContent} />
                     {showContentBubbleBoard && (
                       <ContentBubbleBoard
                         bubbles={plan.contentBubbles}
@@ -988,20 +1492,24 @@ export default function App() {
                 </PlanningAccordion>
 
                 {showCoreAnalyses && (
-                  <PlanningAccordion title="Adressatenanalyse">
-                    <PlanningSubAccordion title="Lernvoraussetzungen erfassen und analysieren">
+                  <PlanningAccordion title={isAdvancedRefMode ? "Notizen zu den Adressaten" : "Adressatenanalyse"}>
+                    <PlanningSubAccordion title={isAdvancedRefMode ? "Aktuelle Beobachtungen und Hinweise" : "Lernvoraussetzungen erfassen und analysieren"}>
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <p className="text-xs leading-relaxed text-ink/50">
-                          {isAdvancedRefMode ? "In der fortgeschrittenen Referendariatsansicht optional einklappbar." : "Was bringen die Lernenden fachlich, sprachlich, methodisch und sozial mit?"}
+                          {isAdvancedRefMode ? "Kurze Notizen zu Besonderheiten, Veränderungen oder aktuellen Hinweisen der Lerngruppe." : "Was bringen die Lernenden fachlich, sprachlich, methodisch und sozial mit?"}
                         </p>
-                        {isAdvancedRefMode && (
-                          <button type="button" className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/55 transition hover:text-ink" onClick={() => setCompactDetailsOpen(!compactDetailsOpen)}>
-                            {compactDetailsOpen ? "Ausblenden" : "Einblenden"}
-                          </button>
-                        )}
                       </div>
-                      {isAdvancedRefMode && !compactDetailsOpen ? (
-                        <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-ink/50">Dieser Analyseblock ist im kompakten Modus eingeklappt. Bei Bedarf kannst du ihn einblenden.</div>
+                      <FieldHelp {...planningFieldHelps.prerequisites} />
+                      {isAdvancedRefMode ? (
+                        <label className="block">
+                          <span className="label">Notizen zu den Adressaten</span>
+                          <textarea
+                            className="field min-h-28"
+                            value={plan.learningPrerequisites.compact}
+                            onChange={(event) => updateLearningPrerequisite("compact", event.target.value)}
+                            placeholder="Besondere Beobachtungen, Veränderungen, einzelne Hinweise oder aktuelle Unterstützungsbedarfe …"
+                          />
+                        </label>
                       ) : (
                         <LearningPrerequisitesCoach
                           value={plan.learningPrerequisites}
@@ -1020,9 +1528,9 @@ export default function App() {
           <section className="mt-8">
             <div className="mb-4 flex items-end justify-between">
               <div>
-                <div className="label">{isInServiceMode ? "Schnellplanung" : "Unterrichtsgrobkonzept"}</div>
-                <h2 className="font-display text-2xl font-bold sm:text-3xl">{isInServiceMode ? "Unterrichtsverlaufplan" : "Päd.-didaktische Synthese (Grobkonzept)"}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-ink/50">{isInServiceMode ? "Kompakter Unterrichtsverlaufplan für den Unterrichtsalltag." : "Der Unterrichtsverlaufplan als roter Faden der Stunde."}</p>
+                <div className="label">{useCompactFlowTitle ? "Schnellplanung" : "Unterrichtsgrobkonzept"}</div>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">{useCompactFlowTitle ? "Unterrichtsverlaufplan" : "Päd.-didaktische Synthese (Grobkonzept)"}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-ink/50">{useCompactFlowTitle ? "Kompakter Unterrichtsverlaufplan für den Unterrichtsalltag." : "Der Unterrichtsverlaufplan als roter Faden der Stunde."}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <button
@@ -1036,6 +1544,10 @@ export default function App() {
                 </button>
                 <button className="icon-btn" onClick={addPhase}><Plus size={17} /> <span className="hidden sm:inline">Phase</span></button>
               </div>
+            </div>
+            <div className="mb-4 grid gap-2">
+              <FieldHelp {...planningFieldHelps.flow} />
+              <QualityReflectionPanel plan={plan} totalMinutes={totalMinutes} />
             </div>
             {plan.phases.length === 0 ? (
               <div className="rounded-[2rem] border border-dashed border-ink/15 bg-white px-6 py-12 text-center">
@@ -1073,27 +1585,43 @@ export default function App() {
                           setDraggedId(null);
                         }}
                         onDragEnd={() => setDraggedId(null)}
-                        className={`relative z-10 overflow-hidden rounded-[2rem] border bg-white text-left transition duration-300 ${isEntry ? "h-52 w-64" : "h-44 w-48"} ${active ? "scale-[1.025] shadow-soft" : "border-ink/10 hover:-translate-y-1 hover:shadow-soft"} ${dragging ? "opacity-35" : "opacity-100"}`}
+                        className={`relative z-10 rounded-[2rem] border bg-white text-left transition duration-300 ${isEntry ? "min-h-64 w-72" : "min-h-56 w-60"} ${active ? "scale-[1.025] shadow-soft" : "border-ink/10 hover:-translate-y-1 hover:shadow-soft"} ${dragging ? "opacity-35" : "opacity-100"}`}
                         style={active ? { borderColor: phase.color, boxShadow: `0 18px 45px ${phase.color}22` } : undefined}
                       >
-                        <div className={`flex h-full w-full flex-col justify-between text-left ${isEntry ? "p-5" : "p-4"}`} onClick={() => setSelectedId(phase.id)}>
+                        <div className={`flex min-h-[inherit] w-full flex-col justify-between text-left ${isEntry ? "p-5" : "p-4"}`} onClick={() => setSelectedId(phase.id)}>
                           <div className="absolute right-0 top-0 h-16 w-16 rounded-bl-[3rem] opacity-90" style={{ background: phase.color }} />
                           <div className="relative">
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.15em] text-ink/45"><GripVertical size={12} />Phase {index + 1}</span>
                             <input
                               aria-label={`Titel von Phase ${index + 1}`}
-                              className={`mt-2 w-[calc(100%-2.25rem)] border-0 bg-transparent p-0 font-display font-bold leading-tight outline-none placeholder:text-ink/25 ${isEntry ? "text-2xl" : "text-xl"}`}
+                              className={`mt-3 w-[calc(100%-2.25rem)] border-0 bg-transparent p-0 font-display font-bold leading-tight outline-none placeholder:text-ink/25 ${isEntry ? "text-2xl" : "text-xl"}`}
                               placeholder="Titel der Phase"
                               value={phase.title}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setSelectedId(phase.id);
                               }}
+                              onDragStart={(event) => event.preventDefault()}
                               onChange={(event) => updatePhase(phase.id, { title: event.target.value })}
                             />
-                            {isEntry && <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-ink/55">{phase.shortDescription || phase.teacherAction || "Kurzbeschreibung ergänzen …"}</p>}
+                            <label className="mt-2 block">
+                              <textarea
+                                aria-label={`Kurzbeschreibung von Phase ${index + 1}`}
+                                rows={2}
+                                className="w-full resize-none overflow-hidden rounded-xl border border-ink/10 bg-paper/70 px-3 py-2 text-xs leading-relaxed text-ink/65 outline-none placeholder:text-ink/30 focus:border-moss focus:bg-white focus:text-ink"
+                                placeholder="Funktion dieser Phase im Unterrichtsverlauf …"
+                                value={phase.shortDescription}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedId(phase.id);
+                                }}
+                                onDragStart={(event) => event.preventDefault()}
+                                onInput={(event) => resizeTextareaToContent(event.currentTarget)}
+                                onChange={(event) => updatePhase(phase.id, { shortDescription: event.target.value })}
+                              />
+                            </label>
                           </div>
-                          <div className="relative flex items-end justify-between">
+                          <div className="relative mt-4 flex items-end justify-between">
                             <div>
                               <div className="text-[10px] font-semibold text-ink/40">{addMinutes(plan.startTime, before)}–{addMinutes(plan.startTime, before + Number(phase.minutes || 0))}</div>
                               <div className="mt-1 inline-flex items-center gap-1 text-xs font-bold"><Clock3 size={13} />{phase.minutes} Min</div>
@@ -1295,7 +1823,7 @@ export default function App() {
             </section>
           )}
 
-          {showObservationTask && !isInServiceMode && (
+          {showObservationTask && (
             <ObservationTaskPanel
               enabled={plan.observationEnabled}
               task={plan.observationTask}
@@ -1317,7 +1845,7 @@ export default function App() {
         <footer className="border-t border-ink/10 bg-white px-4 py-6 text-ink sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-[1540px] flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
             <span className="font-display text-sm font-bold uppercase tracking-wide text-moss">Seminar Metalltechnik · UVP Studio</span>
-            <span className="max-w-4xl text-ink/45">{FOOTER_TEXT}</span>
+            <span className="max-w-4xl text-ink/45">{APP_FOOTER_TEXT}</span>
           </div>
         </footer>
       </div>
@@ -1345,18 +1873,56 @@ export default function App() {
           }}
         />
       )}
-      {uvmOpen && (
-        <UvmModal
-          activeId={activeUvmItem}
-          onSelect={setActiveUvmItem}
+      {competenceModelOpen && (
+        <CompetenceModelModal
+          activeKey={activeCompetenceItem}
+          onSelect={setActiveCompetenceItem}
           onClose={() => {
-            setUvmOpen(false);
-            setActiveUvmItem(null);
+            setCompetenceModelOpen(false);
+            setActiveCompetenceItem(null);
           }}
         />
       )}
+      {hkmOpen && (
+        <HkmModelModal onClose={() => setHkmOpen(false)} />
+      )}
+      {aboutOpen && (
+        <AboutModal onClose={() => setAboutOpen(false)} />
+      )}
       <PrintDocument plan={plan} totalMinutes={totalMinutes} />
     </>
+  );
+}
+
+function AboutModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 px-4 py-6 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-soft">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="label">Über UVP Studio</div>
+            <h2 id="about-title" className="font-display text-2xl font-bold text-ink">UVP Studio</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink/60">Digitale Unterrichtsplanung für die berufliche Lehrerbildung.</p>
+          </div>
+          <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="Über UVP Studio schließen">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="mt-6 rounded-2xl border border-ink/10 bg-paper/70 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Version</div>
+          <div className="mt-1 font-display text-xl font-bold text-moss">Version {APP_VERSION}</div>
+        </div>
+        <p className="mt-5 text-xs leading-relaxed text-ink/45">{APP_FOOTER_TEXT}</p>
+      </div>
+    </div>
   );
 }
 
@@ -1449,15 +2015,13 @@ function CompetencyNeedCoach({
     updateEntry(fieldId, { [key]: next });
   };
 
-  const toggleLevel = (fieldId: CompetencyFieldId, level: number) => {
-    const current = value.selectedLevels[fieldId] ?? [];
-    const next = current.includes(level) ? current.filter((item) => item !== level) : [...current, level].sort((a, b) => a - b);
-    commit({ ...value, selectedLevels: { ...value.selectedLevels, [fieldId]: next } });
+  const setLevel = (fieldId: CompetencyFieldId, level: number) => {
+    commit({ ...value, selectedLevels: { ...value.selectedLevels, [fieldId]: [level] } });
   };
 
   return (
     <div className="grid gap-5">
-      <section className="grid gap-4 rounded-[1.35rem] border border-ink/10 bg-paper/50 p-4 xl:grid-cols-[minmax(360px,1.05fr)_minmax(320px,.95fr)]">
+      <section className="grid gap-4 rounded-[1.35rem] border border-ink/10 bg-paper/50 p-4 xl:grid-cols-[minmax(420px,1.05fr)_minmax(340px,.95fr)]">
         <div>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -1476,26 +2040,39 @@ function CompetencyNeedCoach({
 
         <div className="rounded-2xl border border-ink/10 bg-white p-4">
           <div className="mb-3">
-            <div className="label">Kompetenzbereiche auswählen</div>
-            <p className="text-xs leading-relaxed text-ink/50">Mehrfachauswahl ist möglich. Jeder gewählte Bereich öffnet unten einen eigenen Reflexionsblock.</p>
+            <div className="label">1 · Handlungskompetenzbereich und 2 · Handlungsdimension</div>
+            <p className="text-xs leading-relaxed text-ink/50">Wähle zuerst den Kompetenzbereich und darin die passende Handlungsdimension. Die Matrix bleibt dabei vollständig sichtbar.</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {competencyFieldOrder.map((fieldId) => {
-              const active = value.selectedFields.includes(fieldId);
-              return (
-                <button
-                  key={fieldId}
-                  type="button"
-                  onClick={() => toggleField(fieldId)}
-                  className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left text-sm font-bold transition ${active ? "border-moss/30 bg-sky/20 text-ink shadow-sm" : "border-ink/10 bg-paper/60 text-ink/65 hover:border-moss/30 hover:bg-white"}`}
-                >
-                  <span>{competencyFieldLabel(fieldId)}</span>
-                  <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${active ? "bg-moss text-white" : "bg-white text-ink/25"}`}>
-                    {active ? <Check size={14} /> : <Plus size={14} />}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="grid gap-3">
+            {areas.map((area) => (
+              <section key={area.key} className="rounded-2xl border border-ink/10 bg-paper/50 p-3">
+                <div className="mb-3 rounded-xl bg-white px-3 py-2 font-display text-lg font-bold text-ink shadow-sm">
+                  {area.label}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {dimensions.map((dimension) => {
+                    const fieldId = `${area.key}-${dimension.key}` as CompetencyFieldId;
+                    const active = value.selectedFields.includes(fieldId);
+                    return (
+                      <button
+                        key={fieldId}
+                        type="button"
+                        onClick={() => toggleField(fieldId)}
+                        className={`flex min-h-14 flex-col items-start justify-between rounded-2xl border px-3 py-2 text-left transition ${active ? "border-moss/35 bg-sky/25 text-ink shadow-sm" : "border-ink/10 bg-white text-ink/65 hover:border-moss/30 hover:bg-sky/10"}`}
+                      >
+                        <span className="text-[10px] font-bold uppercase tracking-[.13em] text-ink/40">Dimension</span>
+                        <span className="flex w-full items-center justify-between gap-2 text-base font-black">
+                          {dimension.label}
+                          <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${active ? "bg-moss text-white" : "bg-paper text-ink/25"}`}>
+                            {active ? <Check size={14} /> : <Plus size={14} />}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         </div>
       </section>
@@ -1513,6 +2090,7 @@ function CompetencyNeedCoach({
               ...dimensionConsequenceSuggestions[parsed.dimension],
               ...areaConsequenceSuggestions[parsed.area],
             ]));
+            const selectedLevel = (value.selectedLevels[fieldId] ?? [])[0];
             return (
               <details key={fieldId} open={!compact || value.selectedFields.length === 1} className="group/need overflow-hidden rounded-[1.35rem] border border-ink/10 bg-white [&:not([open])>.need-content]:hidden">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition hover:bg-sky/5 [&::-webkit-details-marker]:hidden">
@@ -1524,21 +2102,61 @@ function CompetencyNeedCoach({
                     <ChevronRight size={15} />
                   </span>
                 </summary>
-                <div className="need-content grid gap-4 border-t border-ink/10 p-4">
-                  <label className="block">
-                    <span className="label">A · Kompetenzbedarf</span>
-                    <span className="mb-2 block text-sm font-semibold text-ink/70">Was sollen die Schülerinnen und Schüler in diesem Bereich entwickeln?</span>
-                    <textarea
-                      className="field min-h-24"
-                      value={entry.demand}
-                      onChange={(event) => updateEntry(fieldId, { demand: event.target.value })}
-                      placeholder="Was sollen sie wissen, fachgerecht anwenden können, wollen oder verantwortlich übernehmen?"
-                    />
-                  </label>
+                <div className="need-content grid gap-5 border-t border-ink/10 p-4">
+                  <CompetencyFormulationHint area={parsed.area} dimension={parsed.dimension} level={selectedLevel} />
 
                   <section>
-                    <div className="label">B · Konkretisierung</div>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="label">3 · Kompetenzstufe auswählen</div>
+                    <p className="mb-3 text-sm font-semibold leading-relaxed text-ink/70">Standardmäßig wird eine eindeutige Stufe pro ausgewähltem Kompetenzfeld gewählt.</p>
+                    <div className="grid gap-2 sm:grid-cols-4">
+                      {[1, 2, 3, 4].map((level) => {
+                        const active = selectedLevel === level;
+                        return (
+                          <button
+                            key={level}
+                            type="button"
+                            onClick={() => setLevel(fieldId, level)}
+                            className={`min-h-12 rounded-2xl border px-3 py-2 text-sm font-black transition ${active ? "border-clay bg-clay text-white shadow-sm" : "border-ink/10 bg-paper text-ink/60 hover:border-clay/35 hover:bg-white hover:text-ink"}`}
+                          >
+                            Stufe {level}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  {selectedLevel ? (
+                    <section className="grid gap-3 rounded-2xl border border-moss/15 bg-sky/5 p-4">
+                      <label className="block">
+                        <span className="label">4 · Konkretes Ziel zur gewählten Stufe</span>
+                        <span className="mb-2 block text-sm font-semibold leading-relaxed text-ink/70">Was sollen die Schülerinnen und Schüler auf dieser Kompetenzstufe konkret erreichen?</span>
+                        <textarea
+                          className="field min-h-24 bg-white"
+                          value={entry.levelGoal}
+                          onChange={(event) => updateEntry(fieldId, { levelGoal: event.target.value })}
+                          placeholder="Die Schülerinnen und Schüler …"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="label">Eigene Beschreibung der Stufe ergänzen</span>
+                        <textarea
+                          className="field min-h-16 bg-white"
+                          value={entry.levelDescription}
+                          onChange={(event) => updateEntry(fieldId, { levelDescription: event.target.value })}
+                          placeholder="Optional: Was bedeutet diese Stufe in deiner konkreten beruflichen Handlungssituation?"
+                        />
+                      </label>
+                    </section>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-ink/15 bg-paper/60 px-4 py-3 text-sm font-semibold text-ink/45">
+                      Wähle eine Kompetenzstufe aus, damit Zielformulierung und Unterrichtskonsequenzen sichtbar werden.
+                    </div>
+                  )}
+
+                  {selectedLevel && (
+                  <section>
+                    <div className="label">Zusätzliche Konkretisierung</div>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {clarificationSuggestions.map((suggestion) => (
                         <DiagnosticCheckbox
                           key={suggestion}
@@ -1558,11 +2176,13 @@ function CompetencyNeedCoach({
                       />
                     </label>
                   </section>
+                  )}
 
+                  {selectedLevel && (
                   <section>
-                    <div className="label">C · Konsequenzen für den Unterricht</div>
+                    <div className="label">5 · Konsequenzen für die Unterrichtsgestaltung</div>
                     <p className="mb-3 text-sm font-semibold text-ink/70">Welche Konsequenzen ergeben sich daraus für die Gestaltung des Unterrichts?</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {consequences.map((suggestion) => (
                         <DiagnosticCheckbox
                           key={suggestion}
@@ -1582,25 +2202,7 @@ function CompetencyNeedCoach({
                       />
                     </label>
                   </section>
-
-                  <section>
-                    <div className="label">Optionale Niveaustufen</div>
-                    <div className="flex flex-wrap gap-2">
-                      {[1, 2, 3, 4].map((level) => {
-                        const active = (value.selectedLevels[fieldId] ?? []).includes(level);
-                        return (
-                          <button
-                            key={level}
-                            type="button"
-                            onClick={() => toggleLevel(fieldId, level)}
-                            className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${active ? "border-clay bg-clay text-white" : "border-ink/10 bg-paper text-ink/55 hover:border-clay/35 hover:bg-white"}`}
-                          >
-                            Niveau {level}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
+                  )}
                 </div>
               </details>
             );
@@ -1628,30 +2230,30 @@ function CompetencyNeedMatrix({
   selectedFields: CompetencyFieldId[];
   selectedLevels: CompetencyNeedAnalysis["selectedLevels"];
 }) {
-  const cellWidth = 136;
-  const rowHeight = 86;
-  const depthX = 96;
-  const depthY = 58;
+  const cellWidth = 150;
+  const rowHeight = 92;
+  const depthX = 92;
+  const depthY = 54;
   return (
-    <div className="overflow-x-auto rounded-2xl bg-white p-3 shadow-inner">
-      <svg viewBox="0 0 760 390" className="min-w-[680px]" role="img" aria-label="Handlungskompetenzmatrix nach Prof. Dr. Manfred Müller mit markierten Kompetenzfeldern">
-        <rect x="300" y="8" width="250" height="34" rx="8" fill="#fff" stroke="#174a87" strokeOpacity=".25" />
-        <text x="425" y="30" textAnchor="middle" fill="#174a87" fontSize="18" fontWeight="800">Handlungsdimensionen</text>
-        <rect x="24" y="104" width="30" height="214" rx="7" fill="#fff" stroke="#174a87" strokeOpacity=".25" />
-        <text x="43" y="214" transform="rotate(-90 43 214)" textAnchor="middle" fill="#174a87" fontSize="13" fontWeight="800">Handlungskompetenzbereiche</text>
+    <div className="overflow-x-auto rounded-2xl bg-white p-4 shadow-inner">
+      <svg viewBox="0 0 860 430" className="min-w-[760px]" role="img" aria-label="Handlungskompetenzmatrix nach Prof. Dr. Manfred Müller mit markierten Kompetenzfeldern">
+        <rect x="330" y="8" width="300" height="36" rx="8" fill="#fff" stroke="#174a87" strokeOpacity=".25" />
+        <text x="480" y="31" textAnchor="middle" fill="#174a87" fontSize="18" fontWeight="800">Handlungsdimensionen</text>
+        <rect x="24" y="112" width="30" height="230" rx="7" fill="#fff" stroke="#174a87" strokeOpacity=".25" />
+        <text x="43" y="228" transform="rotate(-90 43 228)" textAnchor="middle" fill="#174a87" fontSize="13" fontWeight="800">Handlungskompetenzbereiche</text>
 
         {landscapeDimensions.map((dimension, index) => (
           <g key={dimension.key}>
-            <rect x={196 + index * cellWidth} y="58" width={cellWidth - 10} height="48" rx="8" fill="#fff" stroke="#0c2340" strokeOpacity=".18" />
-            <text x={196 + index * cellWidth + (cellWidth - 10) / 2} y="78" textAnchor="middle" fill="#0c2340" fontSize="11">{dimension.label.split(":")[0]}</text>
-            <text x={196 + index * cellWidth + (cellWidth - 10) / 2} y="96" textAnchor="middle" fill="#0c2340" fontSize="18" fontWeight="800">{dimension.label.split(": ")[1]}</text>
+            <rect x={230 + index * cellWidth} y="62" width={cellWidth - 12} height="52" rx="8" fill="#fff" stroke="#0c2340" strokeOpacity=".18" />
+            <text x={230 + index * cellWidth + (cellWidth - 12) / 2} y="84" textAnchor="middle" fill="#0c2340" fontSize="11">{dimension.label.split(":")[0]}</text>
+            <text x={230 + index * cellWidth + (cellWidth - 12) / 2} y="103" textAnchor="middle" fill="#0c2340" fontSize="19" fontWeight="800">{dimension.label.split(": ")[1]}</text>
           </g>
         ))}
 
         {areas.map((area, rowIndex) => (
           <g key={area.key}>
-            <rect x="74" y={124 + rowIndex * rowHeight} width="98" height={rowHeight - 12} rx="8" fill="#fff" stroke="#0c2340" strokeOpacity=".14" />
-            <text x="123" y={166 + rowIndex * rowHeight} textAnchor="middle" fill="#0c2340" fontSize="14" fontWeight="800">{area.label}</text>
+            <rect x="72" y={132 + rowIndex * rowHeight} width="136" height={rowHeight - 12} rx="8" fill="#fff" stroke="#0c2340" strokeOpacity=".14" />
+            <text x="140" y={177 + rowIndex * rowHeight} textAnchor="middle" fill="#0c2340" fontSize="13" fontWeight="800">{area.label}</text>
             {landscapeDimensions.map((dimension, columnIndex) => {
               const fieldId = `${area.key}-${dimension.key}` as CompetencyFieldId;
               const selected = selectedFields.includes(fieldId);
@@ -1663,10 +2265,10 @@ function CompetencyNeedMatrix({
                     return (
                       <rect
                         key={level}
-                        x={196 + columnIndex * cellWidth + depthX * t}
-                        y={124 + rowIndex * rowHeight - depthY * t}
-                        width={cellWidth - 18}
-                        height={rowHeight - 20}
+                        x={230 + columnIndex * cellWidth + depthX * t}
+                        y={132 + rowIndex * rowHeight - depthY * t}
+                        width={cellWidth - 22}
+                        height={rowHeight - 22}
                         rx="5"
                         fill={selected ? "#d8e7f7" : "#f4f6f8"}
                         stroke={levelActive ? "#d55e00" : selected ? "#174a87" : "#0c2340"}
@@ -1677,18 +2279,18 @@ function CompetencyNeedMatrix({
                     );
                   })}
                   <rect
-                    x={196 + columnIndex * cellWidth}
-                    y={124 + rowIndex * rowHeight}
-                    width={cellWidth - 18}
-                    height={rowHeight - 20}
+                    x={230 + columnIndex * cellWidth}
+                    y={132 + rowIndex * rowHeight}
+                    width={cellWidth - 22}
+                    height={rowHeight - 22}
                     rx="6"
                     fill={selected ? "#174a87" : "#ffffff"}
                     fillOpacity={selected ? ".88" : ".72"}
                     stroke={selected ? "#0c2340" : "#0c2340"}
                     strokeOpacity={selected ? ".22" : ".13"}
                   />
-                  <text x={196 + columnIndex * cellWidth + (cellWidth - 18) / 2} y={163 + rowIndex * rowHeight} textAnchor="middle" fill={selected ? "#fff" : "#0c2340"} fontSize="12" fontWeight="800">
-                    {selected ? "markiert" : "auswählen"}
+                  <text x={230 + columnIndex * cellWidth + (cellWidth - 22) / 2} y={172 + rowIndex * rowHeight} textAnchor="middle" fill={selected ? "#fff" : "#0c2340"} fontSize="12" fontWeight="800">
+                    {selected ? "markiert" : "—"}
                   </text>
                 </g>
               );
@@ -1697,11 +2299,11 @@ function CompetencyNeedMatrix({
         ))}
         {[1, 2, 3, 4].map((level, index) => (
           <g key={level}>
-            <rect x={594 + index * 34} y={334 - index * 10} width="24" height="30" rx="4" fill="#fff" stroke="#0c2340" strokeOpacity=".22" />
-            <text x={606 + index * 34} y={354 - index * 10} textAnchor="middle" fill="#0c2340" fontSize="14" fontWeight="800">{level}</text>
+            <rect x={660 + index * 36} y={368 - index * 10} width="26" height="30" rx="4" fill="#fff" stroke="#0c2340" strokeOpacity=".22" />
+            <text x={673 + index * 36} y={388 - index * 10} textAnchor="middle" fill="#0c2340" fontSize="14" fontWeight="800">{level}</text>
           </g>
         ))}
-        <text x="654" y="382" textAnchor="middle" fill="#174a87" fontSize="14" fontWeight="800">Kompetenzstufen</text>
+        <text x="726" y="418" textAnchor="middle" fill="#174a87" fontSize="14" fontWeight="800">Kompetenzstufen</text>
       </svg>
     </div>
   );
@@ -2047,89 +2649,127 @@ function ObservationTaskPanel({
 }
 
 function TeachingStructureModel({ activeId, onSelect }: { activeId: number | null; onSelect: (id: number | null) => void }) {
-  const points = [
-    { id: 1, x: 50, y: 8 }, { id: 2, x: 50, y: 23 }, { id: 3, x: 50, y: 39 }, { id: 4, x: 50, y: 55 },
-    { id: 5, x: 50, y: 72 }, { id: 6, x: 23, y: 79 }, { id: 7, x: 77, y: 79 }, { id: 8, x: 34, y: 90 },
-    { id: 9, x: 66, y: 90 }, { id: 10, x: 13, y: 94 }, { id: 11, x: 87, y: 94 },
-  ];
-  const itemById = new Map(USM_ITEMS.map((item) => [item.id, item]));
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const itemById = new Map<number, (typeof USM_ITEMS)[number]>(USM_ITEMS.map((item) => [item.id, item]));
   const activeItem = activeId ? itemById.get(activeId) : null;
+  const toneColors: Record<string, { fill: string; hoverFill: string; activeFill: string; stroke: string; text: string; ring: string }> = {
+    foundation: { fill: "#e8f1f3", hoverFill: "#dfecef", activeFill: "#d1e4e9", stroke: "#416f7a", text: "#173f49", ring: "#8fb1b9" },
+    communication: { fill: "#f8e5df", hoverFill: "#f3d8cf", activeFill: "#edc6bb", stroke: "#a85a46", text: "#7b3426", ring: "#c98d7e" },
+    planning: { fill: "#edf4fb", hoverFill: "#e1edf8", activeFill: "#d4e5f4", stroke: "#2f6395", text: "#153e65", ring: "#7fa5c8" },
+    success: { fill: "#e8f3ec", hoverFill: "#dcebe3", activeFill: "#cde2d5", stroke: "#3e7a58", text: "#25523b", ring: "#87b59a" },
+    maturity: { fill: "#f5e4f0", hoverFill: "#efd5e8", activeFill: "#e8c6df", stroke: "#9c4f83", text: "#6d2e59", ring: "#c58caf" },
+  };
+  const activate = (id: number) => onSelect(activeId === id ? null : id);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,.9fr)] lg:items-center">
-      <div className="rounded-[2rem] border border-ink/10 bg-paper/50 p-4">
-        <div className="relative mx-auto aspect-[1.18/1] max-w-[620px]">
-          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 86" aria-hidden="true">
-            <path d="M50 4 96 82H4Z" fill="#ffffff" stroke="#174a87" strokeOpacity=".25" strokeWidth="1.2" />
-            <path d="M50 4 50 82" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
-            <path d="M22 72H78" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
-            <path d="M35 50H65" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
-            <path d="M43 30H57" stroke="#174a87" strokeOpacity=".12" strokeWidth="1" />
-            <path d="M8 78C27 50 46 42 69 57C82 66 90 64 96 52" fill="none" stroke="#9f140c" strokeOpacity=".18" strokeWidth="1.4" strokeLinecap="round" />
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(300px,1fr)] xl:items-start">
+      <div className="rounded-[2rem] border border-ink/10 bg-white/85 p-3 shadow-sm sm:p-5">
+        <div className="rounded-[1.6rem] bg-gradient-to-br from-paper via-white to-sky/10 p-4 sm:p-6">
+          <svg className="block h-auto w-full" viewBox="0 0 980 680" role="img" aria-label="Interaktives Unterrichtsstrukturmodell">
+            <defs>
+              <linearGradient id="usm-arrangement" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity=".95" />
+                <stop offset="100%" stopColor="#d8e7f7" stopOpacity=".72" />
+              </linearGradient>
+              <filter id="usm-soft-shadow" x="-20%" y="-20%" width="140%" height="160%">
+                <feDropShadow dx="0" dy="16" stdDeviation="12" floodColor="#0c2340" floodOpacity=".12" />
+              </filter>
+              <filter id="usm-node-shadow" x="-35%" y="-35%" width="170%" height="190%">
+                <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#0c2340" floodOpacity=".12" />
+              </filter>
+            </defs>
+
+            <text x="28" y="40" fill="#0c2340" fontSize="19" fontWeight="900">Schulorganisation und -klima</text>
+            <text x="930" y="470" fill="#0c2340" fontSize="14" fontWeight="800" opacity=".4" transform="rotate(-90 930 470)">Unterrichtsorganisation und -klima</text>
+            <text x="78" y="628" fill="#0c2340" fontSize="20" fontWeight="900" opacity=".72">Pädagogisch-didaktisches Dreieck</text>
+            <text x="700" y="218" fill="#0c2340" fontSize="18" fontWeight="900" opacity=".7">Didaktisches Siebeneck</text>
+
+            <path d="M505 68 L894 616 L112 616 Z" fill="rgba(255,255,255,.54)" stroke="#416f7a" strokeOpacity=".24" strokeWidth="2.2" />
+            <path d="M505 68 L505 616" fill="none" stroke="#416f7a" strokeOpacity=".1" strokeWidth="1.5" />
+            <path d="M505 68 C486 245 486 435 505 616" fill="none" stroke="#416f7a" strokeOpacity=".13" strokeDasharray="5 8" strokeWidth="1.5" />
+            <path d="M240 574 L505 506 L770 574 Z" fill="#e8f1f3" fillOpacity=".22" stroke="#416f7a" strokeOpacity=".38" strokeWidth="2.4" strokeLinejoin="round" />
+            <path d="M240 574 L505 506 M505 506 L770 574 M240 574 L770 574" fill="none" stroke="#416f7a" strokeOpacity=".2" strokeWidth="1.6" />
+
+            <path d="M240 600 C365 520 507 505 770 600 L894 616 L112 616 Z" fill="#0c2340" fillOpacity=".045" />
+            <path d="M320 566 C415 518 548 512 682 566" fill="none" stroke="#a85a46" strokeOpacity=".2" strokeWidth="8" strokeLinecap="round" />
+            <path d="M332 552 C420 514 548 508 668 550" fill="none" stroke="#416f7a" strokeOpacity=".1" strokeWidth="2" strokeDasharray="5 7" />
+
+            <path d="M312 354 C424 312 562 310 704 354 L762 404 C592 460 410 460 252 404 Z" fill="url(#usm-arrangement)" stroke="#174a87" strokeOpacity=".18" filter="url(#usm-soft-shadow)" />
+            <path d="M304 352 L412 410 L574 414 L704 352" fill="none" stroke="#2f6395" strokeOpacity=".24" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+
+            {USM_ITEMS.map((item) => {
+              const color = toneColors[item.tone] ?? toneColors.ink;
+              const focused = item.id === activeId;
+              const hovered = item.id === hoveredId;
+              const width = item.id === 1 ? 190 : item.id === 2 ? 182 : item.id === 10 ? 186 : item.id === 14 ? 162 : item.id === 3 ? 170 : 136;
+              const height = item.id === 1 ? 62 : item.id === 2 ? 58 : item.id === 10 ? 54 : item.id === 14 ? 54 : 48;
+              const x = item.x * 9.8 - width / 2;
+              const y = item.y * 6.8 - height / 2;
+              return (
+                <g
+                  key={item.id}
+                  tabIndex={0}
+                  role="button"
+                  aria-pressed={focused}
+                  aria-label={`${item.title} erläutern`}
+                  className="cursor-pointer outline-none"
+                  onMouseEnter={() => setHoveredId(item.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onFocus={() => setHoveredId(item.id)}
+                  onBlur={() => setHoveredId(null)}
+                  onClick={() => activate(item.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      activate(item.id);
+                    }
+                  }}
+                >
+                  <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    rx={item.id === 10 || item.id === 14 ? 24 : item.id === 1 || item.id === 2 ? 24 : 20}
+                    fill={focused ? color.activeFill : hovered ? color.hoverFill : color.fill}
+                    stroke={focused ? color.stroke : hovered ? color.ring : "#ffffff"}
+                    strokeWidth={focused ? "3" : "2"}
+                    filter="url(#usm-node-shadow)"
+                    className="transition-colors duration-200"
+                  />
+                  <text x={x + width / 2} y={y + (height / 2) + 5} textAnchor="middle" fill={color.text} fontSize={item.id === 1 ? "16" : item.id === 2 ? "15" : item.id === 10 || item.id === 14 ? "13" : "13"} fontWeight="900">
+                    {item.short}
+                  </text>
+                </g>
+              );
+            })}
           </svg>
-          <div className="absolute left-1/2 top-[3%] -translate-x-1/2 text-center">
-            <div className="font-display text-lg font-bold text-ink">Mündigkeit</div>
-          </div>
-          <div className="absolute left-1/2 top-[20%] -translate-x-1/2 text-center text-sm font-bold text-ink/70">Bildungsgangerfolg</div>
-          <div className="absolute left-1/2 top-[36%] -translate-x-1/2 text-center text-sm font-bold text-ink/70">Lernergebnisse</div>
-          <div className="absolute left-1/2 top-[52%] -translate-x-1/2 text-center text-sm font-bold text-ink/70">Ziele</div>
-          <div className="absolute left-1/2 top-[68%] -translate-x-1/2 text-center font-display text-xl font-bold text-moss">Inhalte / Sache</div>
-          <div className="absolute left-[14%] top-[76%] font-bold text-ink/70">Schüler</div>
-          <div className="absolute right-[15%] top-[76%] font-bold text-ink/70">Lehrer</div>
-          <div className="absolute left-[27%] top-[88%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Medien</div>
-          <div className="absolute right-[26%] top-[88%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Methoden</div>
-          <div className="absolute bottom-[1%] left-[5%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Raum</div>
-          <div className="absolute bottom-[1%] right-[6%] text-xs font-bold uppercase tracking-[.12em] text-ink/45">Zeit</div>
-          {points.map((point) => {
-            const item = itemById.get(point.id);
-            return (
-              <button
-                key={point.id}
-                type="button"
-                aria-label={`${point.id}: ${item?.title ?? "USM-Bereich"} öffnen`}
-                className={`absolute grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border text-xs font-black shadow-sm transition focus:outline-none focus:ring-2 focus:ring-clay/30 ${activeId === point.id ? "border-clay bg-clay text-white" : "border-white bg-ink text-white hover:bg-clay"}`}
-                style={{ left: `${point.x}%`, top: `${point.y}%` }}
-                onClick={() => onSelect(point.id)}
-              >
-                {point.id}
-              </button>
-            );
-          })}
         </div>
       </div>
-      <div className="rounded-[2rem] border border-ink/10 bg-sky/10 p-5">
-        <div className="label">Anwendung</div>
-        <h3 className="font-display text-2xl font-bold">Planung und Nachbesprechung</h3>
-        <p className="mt-2 text-sm leading-relaxed text-ink/60">Die Ziffern helfen, Unterrichtsideen systematisch zu prüfen: vom Bildungsanspruch über Ziele und Inhalte bis zu Bedingungen wie Raum, Zeit, Medien und Methoden.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {USM_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${activeId === item.id ? "border-clay bg-clay text-white" : "border-ink/10 bg-white text-ink/60 hover:border-clay hover:text-clay"}`}
-              onClick={() => onSelect(item.id)}
-            >
-              {item.id}. {item.title}
-            </button>
-          ))}
-        </div>
+
+      <div className="min-h-[620px] rounded-[2rem] border border-ink/10 bg-white p-5 shadow-sm">
+        <div className="label">Interaktive Orientierung</div>
+        <h3 className="font-display text-2xl font-bold">{activeItem ? activeItem.title : "Unterricht als Gesamtsystem"}</h3>
+        <p className="mt-3 min-h-[116px] text-sm leading-relaxed text-ink/60">
+          {activeItem ? activeItem.description : "Wähle einen Baustein aus, um seine Bedeutung für Planung, Durchführung und Reflexion von Unterricht zu erkunden."}
+        </p>
         {activeItem && (
-          <div className="mt-5 rounded-2xl border border-clay/15 bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[.14em] text-clay">Punkt {activeItem.id}</div>
-                <h4 className="mt-1 font-display text-xl font-bold">{activeItem.title}</h4>
-              </div>
-              <button
-                type="button"
-                aria-label="USM-Erläuterung schließen"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-paper text-ink/45 transition hover:bg-clay/10 hover:text-clay"
-                onClick={() => onSelect(null)}
-              >
-                <X size={15} />
-              </button>
+          <div className="mt-6 min-h-[260px] rounded-2xl bg-paper/70 px-4 py-4">
+            <div className="text-[10px] font-bold uppercase tracking-[.14em] text-ink/35">Planungsfrage</div>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/75">{activeItem.question}</p>
+            <div className="mt-6 border-t border-ink/10 pt-4 text-xs leading-relaxed text-ink/45">
+              Ebene: {activeItem.layer}
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-ink/65">{activeItem.description}</p>
+          </div>
+        )}
+        {!activeItem && (
+          <div className="mt-5 min-h-[310px] rounded-2xl border border-ink/10 bg-paper/60 p-4">
+            <div className="text-[10px] font-bold uppercase tracking-[.14em] text-ink/35">Legende</div>
+            <div className="mt-3 grid gap-2 text-sm leading-relaxed text-ink/60">
+              <p><span className="font-black text-ink">Fundament:</span> Lehrende, Lernende, Gegenstand und Kommunikation.</p>
+              <p><span className="font-black text-ink">Planungsebene:</span> Ziele, Inhalte, Methoden, Medien, Raum und Zeit im Lehr-Lern-Arrangement.</p>
+              <p><span className="font-black text-ink">Ergebnisebene:</span> Lernergebnisse, Bildungserfolg und Mündigkeit.</p>
+            </div>
           </div>
         )}
       </div>
@@ -2156,114 +2796,182 @@ function UsmModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-soft">
+      <div className="flex max-h-[92vh] w-full max-w-[min(96vw,1500px)] flex-col overflow-hidden rounded-[2rem] bg-white shadow-soft">
         <div className="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4 sm:px-7">
           <div>
             <div className="label">Brainstorming & Nachbesprechung</div>
             <h2 id="usm-title" className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsstrukturmodell (USM)</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">Nutze die anklickbaren Ziffern als Denkanker, ohne den eigentlichen Unterrichtsverlauf zu verlassen.</p>
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">Nutze die anklickbaren Bausteine als Denkanker, ohne den eigentlichen Unterrichtsverlauf zu verlassen.</p>
           </div>
           <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="Unterrichtsstrukturmodell schließen">
             <X size={18} />
           </button>
         </div>
-        <div className="overflow-y-auto p-5 sm:p-7">
+        <div className="overflow-y-auto bg-paper/35 p-5 sm:p-7">
+          <ModelOrientationStrip active="usm" />
+          <div className="mt-5">
           <TeachingStructureModel activeId={activeId} onSelect={onSelect} />
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function UvmModelImage({ activeId, onSelect }: { activeId: number | null; onSelect: (id: number | null) => void }) {
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const currentId = activeId ?? hoveredId;
-  const activeItem = UVM_ITEMS.find((item) => item.id === currentId);
+function CompetenceModelExplorer({
+  activeKey,
+  onSelect,
+}: {
+  activeKey: string | null;
+  onSelect: (key: string | null) => void;
+}) {
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const itemByKey = useMemo(() => new Map<string, (typeof competenceModelItems)[number]>(competenceModelItems.map((item) => [item.key, item])), []);
+  const selectedItem = activeKey ? itemByKey.get(activeKey) : null;
+
+  const renderBlock = (key: string, className = "") => {
+    const item = itemByKey.get(key);
+    if (!item) return null;
+    const isActive = activeKey === key;
+    const isHovered = hoveredKey === key;
+    return (
+      <button
+        key={item.key}
+        type="button"
+        aria-pressed={isActive}
+        aria-label={`${item.title}: ${item.description}`}
+        className={`box-border min-h-[6.2rem] rounded-[1.35rem] border px-4 py-3 text-left transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-clay/35 ${
+          isActive
+            ? "border-clay/55 bg-clay/10 shadow-[0_18px_44px_rgba(159,20,12,.10)]"
+            : isHovered
+              ? "border-primary/25 bg-white shadow-sm"
+              : "border-ink/10 bg-white/82 shadow-sm"
+        } ${className}`}
+        onClick={() => onSelect(isActive ? null : key)}
+        onMouseEnter={() => setHoveredKey(key)}
+        onMouseLeave={() => setHoveredKey(null)}
+        onFocus={() => setHoveredKey(key)}
+        onBlur={() => setHoveredKey(null)}
+      >
+        <span className="text-[10px] font-bold uppercase tracking-[.16em] text-primary/70">{item.subtitle}</span>
+        <span className="mt-1 block font-display text-lg font-bold text-ink">{item.title}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-ink/55">{item.description}</span>
+      </button>
+    );
+  };
 
   return (
-    <div
-      className="relative mx-auto w-full max-w-[680px] rounded-[2rem] border border-ink/10 bg-white p-3 shadow-sm sm:p-4"
-      onMouseDown={() => onSelect(null)}
-    >
-      <div className="relative overflow-hidden rounded-[1.45rem] bg-paper">
-        <img
-          src={UVM_IMAGE}
-          alt="Unterrichtsstrukturmodell nach Müller/Dier mit interaktiven Ziffern"
-          className="block h-auto w-full select-none"
-          draggable={false}
-        />
-        {UVM_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            aria-label={`${item.id}: ${item.title}`}
-            className={`absolute z-10 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-clay/40 ${
-              currentId === item.id
-                ? "border-clay/45 bg-clay/10 shadow-[0_0_0_6px_rgba(159,20,12,.08)]"
-                : "border-transparent bg-transparent hover:border-clay/20 hover:bg-clay/5"
-            }`}
-            style={{
-              left: `${item.x}%`,
-              top: `${item.y}%`,
-              width: "clamp(2.5rem, 8vw, 4.75rem)",
-              height: "clamp(2.5rem, 8vw, 4.75rem)",
-            }}
-            onMouseDown={(event) => event.stopPropagation()}
-            onMouseEnter={() => setHoveredId(item.id)}
-            onMouseLeave={() => setHoveredId(null)}
-            onFocus={() => setHoveredId(item.id)}
-            onBlur={() => setHoveredId(null)}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect(activeId === item.id ? null : item.id);
-            }}
-          >
-            <span className="sr-only">{item.id}</span>
-          </button>
-        ))}
-        {activeItem && (
-          <div
-            className="absolute z-20 w-[min(18rem,72vw)] rounded-2xl border border-clay/15 bg-white/95 p-4 text-left shadow-soft backdrop-blur"
-            style={{
-              left: `${Math.min(86, Math.max(14, activeItem.x))}%`,
-              top: `${Math.min(82, Math.max(10, activeItem.y + 6))}%`,
-              transform: activeItem.x > 68 ? "translate(-100%, .65rem)" : activeItem.x < 28 ? "translate(0, .65rem)" : "translate(-50%, .65rem)",
-            }}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[.14em] text-clay">Punkt {activeItem.id}</div>
-                <h3 className="mt-1 font-display text-lg font-bold text-ink">{activeItem.title}</h3>
-              </div>
-              <button
-                type="button"
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-paper text-ink/45 transition hover:bg-clay/10 hover:text-clay"
-                aria-label="UVM-Information schließen"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect(null);
-                  setHoveredId(null);
-                }}
-              >
-                <X size={14} />
-              </button>
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.36fr)]">
+      <section className="rounded-[2rem] border border-ink/10 bg-white/75 p-4 shadow-sm sm:p-6">
+        <div className="mb-5 max-w-3xl">
+          <div className="label">Interaktives Denkmodell</div>
+          <h3 className="mt-1 font-display text-2xl font-bold text-ink">Kompetenzorientierung als Grundlage</h3>
+          <p className="mt-2 text-sm leading-relaxed text-ink/60">
+            Kompetentes Handeln entsteht im Zusammenspiel fachlicher, sozialer und selbstbezogener Kompetenz sowie durch die Verbindung von Wissen, Können und Wollen.
+          </p>
+        </div>
+
+        <div className="rounded-[1.75rem] border border-primary/10 bg-gradient-to-br from-white via-primary/5 to-clay/5 p-4 sm:p-6">
+          <div className="mx-auto grid max-w-5xl gap-4">
+            <div className="grid justify-items-center">
+              {renderBlock("muendigkeit", "w-full max-w-md text-center")}
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-ink/65">{activeItem.description}</p>
+
+            <div className="flex justify-center text-primary/35" aria-hidden="true">
+              <ChevronDown size={24} />
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,0.8fr)_minmax(0,1fr)] lg:items-center">
+              <div className="grid gap-3">
+                <div className="text-center text-[11px] font-bold uppercase tracking-[.18em] text-ink/45 lg:text-left">Kompetenzbereiche</div>
+                {renderBlock("fach")}
+                {renderBlock("sozial")}
+                {renderBlock("selbst")}
+              </div>
+
+              <div className="grid gap-3">
+                {renderBlock("competence", "min-h-[11rem] border-primary/20 bg-white text-center")}
+                <div className="rounded-2xl border border-primary/10 bg-white/60 px-4 py-3 text-center text-xs leading-relaxed text-ink/55">
+                  Nicht nur wissen. Nicht nur ausführen. Sondern verstehen, anwenden und verantworten.
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-center text-[11px] font-bold uppercase tracking-[.18em] text-ink/45 lg:text-left">Handlungsdimensionen</div>
+                {renderBlock("wissen")}
+                {renderBlock("koennen")}
+                {renderBlock("wollen")}
+              </div>
+            </div>
+
+            <div className="flex justify-center text-primary/35" aria-hidden="true">
+              <ChevronDown size={24} />
+            </div>
+
+            <div className="grid justify-items-center">
+              {renderBlock("situation", "w-full max-w-2xl text-center")}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[1.5rem] border border-primary/10 bg-primary/5 p-4 text-sm leading-relaxed text-ink/65">
+          Im nächsten Modell zeigt die Handlungskompetenzmatrix, wie Kompetenzbereiche, Handlungsdimensionen und Zielniveaus systematisch miteinander verbunden werden.
+        </div>
+      </section>
+
+      <aside className="min-h-[30rem] rounded-[2rem] border border-ink/10 bg-white p-5 shadow-sm sm:p-6">
+        {selectedItem ? (
+          <div>
+            <div className="label">Ausgewählter Baustein</div>
+            <h3 className="mt-2 font-display text-2xl font-bold text-ink">{selectedItem.title}</h3>
+            <p className="mt-3 text-sm leading-relaxed text-ink/68">{selectedItem.description}</p>
+
+            <div className="mt-5 rounded-2xl bg-paper p-4">
+              <div className="text-[11px] font-bold uppercase tracking-[.14em] text-primary/70">Bedeutung für Unterricht</div>
+              <p className="mt-2 text-sm leading-relaxed text-ink/65">{selectedItem.meaning}</p>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-clay/12 bg-clay/5 p-4">
+              <div className="text-[11px] font-bold uppercase tracking-[.14em] text-clay/75">Praxisbeispiel</div>
+              <p className="mt-2 text-sm leading-relaxed text-ink/65">{selectedItem.example}</p>
+            </div>
+
+            <div className="mt-5">
+              <div className="text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Reflexionsfragen</div>
+              <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink/65">
+                {selectedItem.questions.map((question) => (
+                  <li key={question} className="rounded-xl bg-paper/75 px-3 py-2">• {question}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="label">Orientierung</div>
+            <h3 className="mt-2 font-display text-2xl font-bold text-ink">Kompetenzorientierung als Grundlage</h3>
+            <p className="mt-3 text-sm leading-relaxed text-ink/68">
+              Kompetenzorientierter Unterricht bereitet Lernende darauf vor, berufliche, gesellschaftliche und private Anforderungen selbstständig, sachgerecht, reflektiert und verantwortlich zu bewältigen.
+            </p>
+            <p className="mt-4 rounded-2xl bg-paper p-4 text-sm font-semibold leading-relaxed text-ink/70">
+              Wähle einen Baustein aus, um das zugrunde liegende Kompetenzverständnis zu erkunden.
+            </p>
+            <div className="mt-5 rounded-2xl border border-primary/10 bg-primary/5 p-4 text-sm leading-relaxed text-ink/60">
+              Merkhilfe: Nicht nur wissen. Nicht nur ausführen. Sondern verstehen, anwenden und verantworten.
+            </div>
           </div>
         )}
-      </div>
+      </aside>
     </div>
   );
 }
 
-function UvmModal({
-  activeId,
+function CompetenceModelModal({
+  activeKey,
   onSelect,
   onClose,
 }: {
-  activeId: number | null;
-  onSelect: (id: number | null) => void;
+  activeKey: string | null;
+  onSelect: (key: string | null) => void;
   onClose: () => void;
 }) {
   return (
@@ -2271,29 +2979,378 @@ function UvmModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 px-4 py-6 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="uvm-title"
+      aria-labelledby="competence-model-title"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-soft">
+      <div className="flex max-h-[92vh] w-full max-w-[min(96vw,1500px)] flex-col overflow-hidden rounded-[2rem] bg-white shadow-soft">
         <div className="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4 sm:px-7">
           <div>
-            <div className="label">Modelle → UVM</div>
-            <h2 id="uvm-title" className="font-display text-2xl font-bold sm:text-3xl">Unterrichtsvorbereitungsmodell (UVM)</h2>
+            <div className="label">Modelle → Kompetenzverständnis</div>
+            <h2 id="competence-model-title" className="font-display text-2xl font-bold sm:text-3xl">Kompetenzverständnis</h2>
             <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">
-              Fahre mit der Maus über eine Ziffer oder tippe sie an, um eine kurze Erläuterung einzublenden.
+              Eine kompakte Einführung in die Grundidee kompetenzorientierten Unterrichts: Anforderungen bewältigen, Wissen, Können und Wollen verbinden, Mündigkeit anbahnen.
             </p>
           </div>
-          <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="Unterrichtsvorbereitungsmodell schließen">
+          <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="Kompetenzverständnis schließen">
             <X size={18} />
           </button>
         </div>
         <div className="overflow-y-auto bg-paper/35 p-5 sm:p-7">
-          <UvmModelImage activeId={activeId} onSelect={onSelect} />
+          <ModelOrientationStrip active="competence" />
+          <div className="mt-5">
+            <CompetenceModelExplorer activeKey={activeKey} onSelect={onSelect} />
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function HkmModelModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 px-4 py-6 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hkm-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="flex max-h-[92vh] w-full max-w-[min(96vw,1500px)] flex-col overflow-hidden rounded-[2rem] bg-white shadow-soft">
+        <div className="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4 sm:px-7">
+          <div>
+            <div className="label">Modelle → Handlungskompetenzmatrix</div>
+            <h2 id="hkm-title" className="font-display text-2xl font-bold sm:text-3xl">Handlungskompetenzmatrix</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">
+              Ein kompakter Blick auf die Handlungskompetenzmatrix: berufliche Anforderung, Kompetenzbereiche, Handlungsdimensionen und Stufen.
+            </p>
+          </div>
+          <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="Handlungskompetenzmatrix schließen">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="overflow-y-auto bg-paper/35 p-5 sm:p-7">
+          <ModelOrientationStrip active="hkm" />
+          <div className="mt-5">
+          <LayeredHkmModelExplorer />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModelOrientationStrip({ active }: { active: "competence" | "hkm" | "usm" | "uvp" }) {
+  const steps = [
+    { key: "competence", title: "Kompetenzverständnis", subtitle: "Wissen · Können · Wollen" },
+    { key: "hkm", title: "Handlungskompetenzmatrix", subtitle: "Ziele und Niveaus klären" },
+    { key: "usm", title: "Unterrichtsstrukturmodell", subtitle: "Planungsentscheidungen vernetzen" },
+    { key: "uvp", title: "Lernsituation & UVP", subtitle: "konkret planen und reflektieren" },
+  ] as const;
+  return (
+    <section className="rounded-[1.75rem] border border-white/70 bg-white/70 p-3 shadow-sm backdrop-blur-xl">
+      <div className="grid gap-2 md:grid-cols-4">
+        {steps.map((step, index) => {
+          const isActive = step.key === active;
+          return (
+            <div key={step.key} className={`relative rounded-2xl border px-4 py-3 transition ${isActive ? "border-clay/20 bg-clay/5" : "border-ink/10 bg-white/70"}`}>
+              {index > 0 && <span className="absolute -left-3 top-1/2 hidden -translate-y-1/2 text-ink/20 md:block">→</span>}
+              <div className={`text-[10px] font-black uppercase tracking-[.14em] ${isActive ? "text-clay" : "text-ink/35"}`}>Schritt {index + 1}</div>
+              <div className="mt-1 text-sm font-black text-ink">{step.title}</div>
+              <div className="mt-0.5 text-xs leading-relaxed text-ink/45">{step.subtitle}</div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function HkmModelExplorer() {
+  const [activeKey, setActiveKey] = useState<string>("requirement");
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const currentKey = hoverKey ?? activeKey;
+  const makeCellKey = (area: CompetencyArea, dimension: CompetencyDimension, level: number) => `cell:${area}:${dimension}:${level}`;
+  const makeAreaKey = (area: CompetencyArea) => `area:${area}`;
+  const makeDimensionKey = (dimension: CompetencyDimension) => `dimension:${dimension}`;
+  const makeLevelKey = (level: number) => `level:${level}`;
+  const parseCell = (key: string) => {
+    const [, area, dimension, level] = key.split(":");
+    return { area: area as CompetencyArea, dimension: dimension as CompetencyDimension, level: Number(level) };
+  };
+  const modelInfo = (() => {
+    if (currentKey === "requirement") {
+      return {
+        title: "Berufliche Anforderung",
+        kicker: "Ausgangspunkt",
+        body: "Die Anforderungssituation gibt der Kompetenzentwicklung Sinn: Was müssen Lernende in einer beruflichen Situation verstehen, können und verantworten?",
+        hint: "Von hier aus werden Kompetenzbereich, Handlungsdimension und Zielniveau abgeleitet.",
+      };
+    }
+    if (currentKey.startsWith("area:")) {
+      const area = hkmModelAreas.find((item) => item.key === currentKey.split(":")[1]) ?? hkmModelAreas[0];
+      return { title: area.title, kicker: area.subtitle, body: area.description, hint: "Passende Lernziele beschreiben, worauf sich das Handeln richtet." };
+    }
+    if (currentKey.startsWith("dimension:")) {
+      const dimension = hkmModelDimensions.find((item) => item.key === currentKey.split(":")[1]) ?? hkmModelDimensions[0];
+      return { title: `${dimension.code} · ${dimension.title}`, kicker: "Handlungsdimension", body: dimension.description, hint: "Die Dimension klärt, welche Art von Ziel formuliert wird." };
+    }
+    if (currentKey.startsWith("level:")) {
+      const level = hkmModelLevels.find((item) => item.value === Number(currentKey.split(":")[1])) ?? hkmModelLevels[0];
+      return { title: level.title, kicker: "Kompetenzstufe", body: level.description, hint: "Die Stufe beschreibt Tiefe, Komplexität und Selbstständigkeit des Zielniveaus." };
+    }
+    const cell = parseCell(currentKey);
+    const area = hkmModelAreas.find((item) => item.key === cell.area) ?? hkmModelAreas[0];
+    const dimension = hkmModelDimensions.find((item) => item.key === cell.dimension) ?? hkmModelDimensions[0];
+    const level = hkmModelLevels.find((item) => item.value === cell.level) ?? hkmModelLevels[0];
+    return {
+      title: `${area.title} · ${dimension.title} · ${level.title}`,
+      kicker: "Zielformulierungsfeld",
+      body: `${area.description} ${dimension.description}`,
+      hint: level.description,
+    };
+  })();
+  const isCellHighlighted = (area: CompetencyArea, dimension: CompetencyDimension, level: number) => {
+    if (currentKey === "requirement") return false;
+    if (currentKey === makeAreaKey(area)) return true;
+    if (currentKey === makeDimensionKey(dimension)) return true;
+    if (currentKey === makeLevelKey(level)) return true;
+    return currentKey === makeCellKey(area, dimension, level);
+  };
+  const isCellDimmed = (area: CompetencyArea, dimension: CompetencyDimension, level: number) => currentKey !== "requirement" && !isCellHighlighted(area, dimension, level);
+
+  return (
+    <section className="rounded-[2rem] border border-white/70 bg-white/80 p-3 shadow-soft backdrop-blur-xl sm:p-5">
+      <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-white via-paper to-sky/10">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full border-[48px] border-sky/10" />
+        <div className="overflow-x-auto p-3 sm:p-5">
+          <svg viewBox="0 0 1180 760" className="min-w-[1040px]" role="img" aria-label="Interaktive dreidimensionale Handlungskompetenzmatrix">
+            <defs>
+              <linearGradient id="hkm-card" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="100%" stopColor="#e8f2fb" />
+              </linearGradient>
+              <linearGradient id="hkm-active" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#174a87" />
+                <stop offset="100%" stopColor="#5687b9" />
+              </linearGradient>
+              <filter id="hkm-soft-shadow" x="-25%" y="-25%" width="150%" height="170%">
+                <feDropShadow dx="0" dy="14" stdDeviation="11" floodColor="#0c2340" floodOpacity=".13" />
+              </filter>
+              <filter id="hkm-cell-shadow" x="-20%" y="-20%" width="140%" height="160%">
+                <feDropShadow dx="0" dy="8" stdDeviation="5" floodColor="#0c2340" floodOpacity=".12" />
+              </filter>
+            </defs>
+
+            <rect x="18" y="18" width="1144" height="704" rx="34" fill="#ffffff" fillOpacity=".68" stroke="#174a87" strokeOpacity=".08" />
+            <path d="M174 612 C390 690 744 694 990 564" fill="none" stroke="#a20d05" strokeOpacity=".08" strokeWidth="10" strokeLinecap="round" />
+
+            <g tabIndex={0} role="button" className="cursor-pointer outline-none" onMouseEnter={() => setHoverKey("requirement")} onMouseLeave={() => setHoverKey(null)} onFocus={() => setHoverKey("requirement")} onBlur={() => setHoverKey(null)} onClick={() => setActiveKey("requirement")}>
+              <rect x="462" y="30" width="310" height="42" rx="14" fill={currentKey === "requirement" ? "#174a87" : "#ffffff"} stroke="#174a87" strokeOpacity=".25" filter="url(#hkm-soft-shadow)" />
+              <text x="617" y="56" textAnchor="middle" fill={currentKey === "requirement" ? "#ffffff" : "#174a87"} fontSize="18" fontWeight="900">Berufliche Anforderung</text>
+            </g>
+
+            <text x="578" y="118" textAnchor="middle" fill="#1383bd" fontSize="22" fontWeight="900">Handlungsdimensionen</text>
+            {hkmModelDimensions.map((dimension, index) => {
+              const x = 380 + index * 205;
+              const active = currentKey === makeDimensionKey(dimension.key);
+              const related = currentKey.startsWith("cell:") && parseCell(currentKey).dimension === dimension.key;
+              return (
+                <g key={dimension.key} tabIndex={0} role="button" className="cursor-pointer outline-none" onMouseEnter={() => setHoverKey(makeDimensionKey(dimension.key))} onMouseLeave={() => setHoverKey(null)} onFocus={() => setHoverKey(makeDimensionKey(dimension.key))} onBlur={() => setHoverKey(null)} onClick={() => setActiveKey(makeDimensionKey(dimension.key))}>
+                  <rect x={x} y="136" width="160" height="74" rx="12" fill={active || related ? "#174a87" : "#ffffff"} stroke={active || related ? "#a20d05" : "#174a87"} strokeOpacity={active || related ? ".65" : ".16"} strokeWidth={active ? "2.5" : "1.3"} filter="url(#hkm-cell-shadow)" />
+                  <text x={x + 80} y="160" textAnchor="middle" fill={active || related ? "#ffffff" : "#0c2340"} opacity=".65" fontSize="11" fontWeight="900">{dimension.code}</text>
+                  <text x={x + 80} y="184" textAnchor="middle" fill={active || related ? "#ffffff" : "#0c2340"} fontSize="20" fontWeight="900">{dimension.title}</text>
+                </g>
+              );
+            })}
+
+            <text x="72" y="456" transform="rotate(-90 72 456)" fill="#1383bd" fontSize="16" fontWeight="900">Handlungskompetenzbereiche</text>
+            {hkmModelAreas.map((area, areaIndex) => {
+              const y = 258 + areaIndex * 136;
+              const active = currentKey === makeAreaKey(area.key);
+              const related = currentKey.startsWith("cell:") && parseCell(currentKey).area === area.key;
+              return (
+                <g key={area.key}>
+                  <text x="132" y={y - 15} fill="#0c2340" opacity=".55" fontSize="13" fontStyle="italic">{area.subtitle}</text>
+                  <g tabIndex={0} role="button" className="cursor-pointer outline-none" onMouseEnter={() => setHoverKey(makeAreaKey(area.key))} onMouseLeave={() => setHoverKey(null)} onFocus={() => setHoverKey(makeAreaKey(area.key))} onBlur={() => setHoverKey(null)} onClick={() => setActiveKey(makeAreaKey(area.key))}>
+                    <rect x="128" y={y} width="190" height="72" rx="12" fill={active || related ? "#174a87" : "#ffffff"} stroke={active || related ? "#a20d05" : "#174a87"} strokeOpacity={active || related ? ".65" : ".16"} strokeWidth={active ? "2.5" : "1.3"} filter="url(#hkm-cell-shadow)" />
+                    <text x="223" y={y + 42} textAnchor="middle" fill={active || related ? "#ffffff" : "#0c2340"} fontSize="17" fontWeight="900">{area.title}</text>
+                  </g>
+                </g>
+              );
+            })}
+
+            {hkmModelAreas.map((area, areaIndex) => {
+              const baseY = 258 + areaIndex * 136;
+              const baseX = 376;
+              const cellWidth = 182;
+              const cellHeight = 92;
+              const depthX = 70;
+              const depthY = -34;
+              return hkmModelDimensions.map((dimension, dimensionIndex) => (
+                <g key={`${area.key}-${dimension.key}`}>
+                  {[4, 3, 2, 1].map((level) => {
+                    const x = baseX + dimensionIndex * cellWidth + (level - 1) * depthX;
+                    const y = baseY + (level - 1) * depthY;
+                    const highlighted = isCellHighlighted(area.key, dimension.key, level);
+                    const dimmed = isCellDimmed(area.key, dimension.key, level);
+                    const activeCell = currentKey === makeCellKey(area.key, dimension.key, level);
+                    return (
+                      <g key={`${area.key}-${dimension.key}-${level}`} tabIndex={0} role="button" className="cursor-pointer outline-none" opacity={dimmed ? .33 : 1} onMouseEnter={() => setHoverKey(makeCellKey(area.key, dimension.key, level))} onMouseLeave={() => setHoverKey(null)} onFocus={() => setHoverKey(makeCellKey(area.key, dimension.key, level))} onBlur={() => setHoverKey(null)} onClick={() => setActiveKey(makeCellKey(area.key, dimension.key, level))}>
+                        <rect x={x} y={y} width={cellWidth - 18} height={cellHeight} rx="10" fill={highlighted ? "url(#hkm-active)" : "url(#hkm-card)"} stroke={activeCell ? "#a20d05" : highlighted ? "#174a87" : "#174a87"} strokeOpacity={activeCell ? ".9" : highlighted ? ".38" : ".15"} strokeWidth={activeCell ? "3" : highlighted ? "2" : "1"} filter="url(#hkm-cell-shadow)" />
+                        <text x={x + (cellWidth - 18) / 2} y={y + 48} textAnchor="middle" fill={highlighted ? "#ffffff" : "#0c2340"} fontSize="14" fontWeight="900">{dimension.code}: {dimension.title}</text>
+                      </g>
+                    );
+                  })}
+                </g>
+              ));
+            })}
+
+            <text x="868" y="654" fill="#1383bd" fontSize="19" fontWeight="900" transform="rotate(-26 868 654)">Kompetenzstufen</text>
+            {hkmModelLevels.map((level, index) => {
+              const active = currentKey === makeLevelKey(level.value) || (currentKey.startsWith("cell:") && parseCell(currentKey).level === level.value);
+              const x = 810 + index * 64;
+              const y = 602 - index * 28;
+              return (
+                <g key={level.value} tabIndex={0} role="button" className="cursor-pointer outline-none" onMouseEnter={() => setHoverKey(makeLevelKey(level.value))} onMouseLeave={() => setHoverKey(null)} onFocus={() => setHoverKey(makeLevelKey(level.value))} onBlur={() => setHoverKey(null)} onClick={() => setActiveKey(makeLevelKey(level.value))}>
+                  <rect x={x} y={y} width="42" height="54" rx="8" fill={active ? "#a20d05" : "#ffffff"} stroke="#174a87" strokeOpacity=".18" filter="url(#hkm-cell-shadow)" />
+                  <text x={x + 21} y={y + 35} textAnchor="middle" fill={active ? "#ffffff" : "#0c2340"} fontSize="18" fontWeight="900">{level.value}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="border-t border-ink/10 bg-white/75 px-4 py-4 backdrop-blur-xl sm:px-6">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.42fr)] lg:items-start">
+            <div className="rounded-2xl border border-ink/10 bg-white px-4 py-3 shadow-sm">
+              <div className="text-[10px] font-black uppercase tracking-[.14em] text-clay">{modelInfo.kicker}</div>
+              <h3 className="mt-1 font-display text-xl font-bold text-ink">{modelInfo.title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-ink/60">{modelInfo.body}</p>
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-ink/45">{modelInfo.hint}</p>
+            </div>
+            <div className="rounded-2xl border border-moss/15 bg-sky/5 px-4 py-3 text-xs font-semibold leading-relaxed text-ink/55">
+              Die Matrix unterstützt Zielformulierung, Planung und Reflexion. Sie bewertet keine Lernenden und schreibt keine Methode vor.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LayeredHkmModelExplorer() {
+  const [selectedArea, setSelectedArea] = useState<CompetencyArea>("fach");
+  const [selectedCell, setSelectedCell] = useState<{ area: CompetencyArea; dimension: CompetencyDimension; level: number }>({ area: "fach", dimension: "wissen", level: 2 });
+  const selectedAreaMeta = hkmModelAreas.find((area) => area.key === selectedArea) ?? hkmModelAreas[0];
+  const selectedDimension = hkmModelDimensions.find((dimension) => dimension.key === selectedCell.dimension) ?? hkmModelDimensions[0];
+  const selectedLevel = hkmModelLevels.find((level) => level.value === selectedCell.level) ?? hkmModelLevels[0];
+  const selectedCellArea = hkmModelAreas.find((area) => area.key === selectedCell.area) ?? hkmModelAreas[0];
+  const exampleVerb = selectedCell.dimension === "wissen" ? "erklären" : selectedCell.dimension === "koennen" ? "anwenden und begründen" : "verantwortlich entscheiden";
+  const previousLevel = hkmModelLevels.find((level) => level.value === selectedCell.level - 1);
+  const nextLevel = hkmModelLevels.find((level) => level.value === selectedCell.level + 1);
+
+  return (
+    <section className="grid gap-5">
+      <div className="rounded-[2rem] border border-white/70 bg-white/80 p-4 shadow-soft backdrop-blur-xl sm:p-6">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="label">Ebene 1 · Gesamtübersicht</div>
+            <h3 className="font-display text-2xl font-bold text-ink">Handlungskompetenzmatrix</h3>
+          </div>
+          <span className="rounded-full bg-sky/10 px-3 py-1.5 text-xs font-bold text-moss">Orientierung ohne Interaktionsdruck</span>
+        </div>
+        <div className="rounded-[1.5rem] bg-white p-3 shadow-inner sm:p-5">
+          <img
+            src={HKM_REFERENCE_IMAGE}
+            alt="Übersicht der Handlungskompetenzmatrix mit Kompetenzbereichen, Handlungsdimensionen und Kompetenzstufen"
+            className="mx-auto block h-auto max-h-[58vh] w-full max-w-5xl rounded-xl object-contain"
+            draggable={false}
+          />
+          <div className="mx-auto mt-3 max-w-5xl rounded-2xl bg-paper/70 px-4 py-3 text-center text-sm font-bold text-ink/60">
+            Handlungskompetenzmatrix der gewerblich-technischen Universitätsberufsschule Bayreuth nach Müller
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[2rem] border border-ink/10 bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-4">
+          <div className="label">Ebene 2 · Schichtweise Exploration</div>
+          <h3 className="font-display text-2xl font-bold text-ink">Kompetenzbereiche einzeln erkunden</h3>
+        </div>
+        <div className="mb-4 grid gap-2 md:grid-cols-3" role="tablist" aria-label="Kompetenzbereich auswählen">
+          {hkmModelAreas.map((area) => {
+            const active = selectedArea === area.key;
+            return (
+              <button
+                key={area.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={`min-h-20 rounded-2xl border px-4 py-3 text-left transition ${active ? "border-clay/30 bg-clay/5 shadow-sm" : "border-ink/10 bg-paper/70 hover:border-moss/25 hover:bg-sky/5"}`}
+                onClick={() => {
+                  setSelectedArea(area.key);
+                  setSelectedCell((old) => ({ ...old, area: area.key }));
+                }}
+              >
+                <span className={`block text-[10px] font-black uppercase tracking-[.14em] ${active ? "text-clay" : "text-ink/35"}`}>{area.subtitle}</span>
+                <span className="mt-1 block text-base font-black text-ink">{area.title}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,.42fr)]">
+          <div className="rounded-[1.5rem] border border-ink/10 bg-paper/60 p-3 sm:p-4">
+            <div className="mb-3 rounded-2xl bg-white px-4 py-3 shadow-sm">
+              <div className="text-sm font-black text-ink">{selectedAreaMeta.title}</div>
+              <p className="mt-1 text-xs leading-relaxed text-ink/50">{selectedAreaMeta.description}</p>
+            </div>
+            <div className="grid grid-cols-[72px_repeat(3,minmax(0,1fr))] gap-2 text-sm">
+              <div />
+              {hkmModelDimensions.map((dimension) => (
+                <div key={dimension.key} className="rounded-xl bg-white px-3 py-2 text-center font-black text-ink shadow-sm">{dimension.code}: {dimension.title}</div>
+              ))}
+              {hkmModelLevels.map((level) => (
+                <Fragment key={level.value}>
+                  <div className="flex min-h-20 items-center justify-center rounded-xl bg-white px-2 text-center text-xs font-black text-ink/55 shadow-sm">Stufe {level.value}</div>
+                  {hkmModelDimensions.map((dimension) => {
+                    const active = selectedCell.area === selectedArea && selectedCell.dimension === dimension.key && selectedCell.level === level.value;
+                    return (
+                      <button
+                        key={`${selectedArea}-${dimension.key}-${level.value}`}
+                        type="button"
+                        className={`min-h-20 rounded-xl border px-3 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-clay/30 ${active ? "border-clay bg-white shadow-md" : "border-ink/10 bg-white/70 hover:border-moss/25 hover:bg-white"}`}
+                        onClick={() => setSelectedCell({ area: selectedArea, dimension: dimension.key, level: level.value })}
+                      >
+                        <span className={`block text-[10px] font-black uppercase tracking-[.13em] ${active ? "text-clay" : "text-ink/35"}`}>{dimension.code} · Stufe {level.value}</span>
+                        <span className="mt-1 block text-sm font-bold leading-snug text-ink">{dimension.title}</span>
+                      </button>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+          <aside className="min-h-[420px] rounded-[1.5rem] border border-moss/15 bg-sky/5 p-5">
+            <div className="text-[10px] font-black uppercase tracking-[.14em] text-clay">Ausgewählter Kompetenzblock</div>
+            <h4 className="mt-2 font-display text-2xl font-bold text-ink">{selectedCellArea.title} × {selectedDimension.title} × Stufe {selectedLevel.value}</h4>
+            <div className="mt-4 grid gap-3 text-sm leading-relaxed text-ink/65">
+              <p><span className="font-black text-ink">Bedeutung: </span>{selectedCellArea.description} {selectedDimension.description}</p>
+              <p><span className="font-black text-ink">Zielniveau: </span>{selectedLevel.description}</p>
+              <p><span className="font-black text-ink">Mögliche Zielformulierung: </span>Die Lernenden können in einer beruflichen Anforderungssituation fachlich passend {exampleVerb}.</p>
+              <p><span className="font-black text-ink">Beobachtbar wird das etwa daran, dass </span>die Lernenden ihr Vorgehen sichtbar machen, begründen und auf die Situation beziehen.</p>
+            </div>
+            <div className="mt-4 grid gap-2 rounded-2xl bg-white/85 p-4 text-xs leading-relaxed text-ink/55">
+              <p><span className="font-black text-ink/70">Abgrenzung: </span>{previousLevel ? `Gegenüber Stufe ${previousLevel.value} steigt Selbstständigkeit, Transfer oder Begründungstiefe.` : "Stufe 1 beschreibt einen ersten, noch stark angeleiteten Zugang."}</p>
+              <p>{nextLevel ? `Stufe ${nextLevel.value} würde stärker auf komplexere, selbstständigere oder verantwortungsvollere Bewältigung zielen.` : "Stufe 4 beschreibt das höchste Zielniveau innerhalb dieser Matrixlogik."}</p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -2302,6 +3359,243 @@ function InfoHint({ title }: { title: string }) {
     <span className="inline-flex items-center rounded-full border border-ink/10 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.12em] text-ink/35">
       {title}
     </span>
+  );
+}
+
+function FieldHelp({
+  title,
+  phase,
+  purpose,
+  questions,
+  pitfalls,
+  tips,
+}: {
+  title: string;
+  phase: string;
+  purpose: string;
+  questions: readonly string[];
+  pitfalls: readonly string[];
+  tips: readonly string[];
+}) {
+  return (
+    <details className="group/help rounded-2xl border border-ink/10 bg-white/75 text-sm shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left font-bold text-ink/70 transition hover:bg-sky/5 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2">
+          <BookOpen size={15} className="shrink-0 text-moss" />
+          <span className="truncate">{title}</span>
+          <span className="hidden rounded-full bg-sky/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-[.12em] text-moss sm:inline-flex">{phase}</span>
+        </span>
+        <ChevronDown size={15} className="shrink-0 text-ink/35 transition group-open/help:rotate-180" />
+      </summary>
+      <div className="grid gap-3 border-t border-ink/10 px-4 py-3 text-xs leading-relaxed text-ink/60 md:grid-cols-3">
+        <div className="md:col-span-3">
+          <span className="font-bold text-ink">Ziel: </span>{purpose}
+        </div>
+        <MiniHelpList title="Leitfragen" items={questions} />
+        <MiniHelpList title="Häufige Stolperstellen" items={pitfalls} />
+        <MiniHelpList title="Praktische Tipps" items={tips} />
+      </div>
+    </details>
+  );
+}
+
+function MiniHelpList({ title, items }: { title: string; items: readonly string[] }) {
+  return (
+    <div className="rounded-xl bg-paper/70 p-3">
+      <div className="mb-1.5 text-[10px] font-black uppercase tracking-[.12em] text-ink/40">{title}</div>
+      <ul className="space-y-1.5">
+        {items.map((item) => <li key={item}>• {item}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function GoalAssistantPanel({
+  value,
+  globalGoal,
+  onChange,
+  onApply,
+}: {
+  value: Plan["goalAssistant"];
+  globalGoal: string;
+  onChange: (patch: Partial<Plan["goalAssistant"]>) => void;
+  onApply: () => void;
+}) {
+  const suggestion = buildGoalSuggestion(value);
+  const checks = [
+    { label: "Situation erkennbar", ok: Boolean(value.situation.trim()) || /\b(in|bei|angesichts|ausgehend von)\b/i.test(globalGoal) },
+    { label: "Inhalt benannt", ok: Boolean(value.content.trim()) || globalGoal.trim().length > 45 },
+    { label: "Beobachtbares Verhalten", ok: Boolean(value.behavior.trim()) || hasObservableVerb(globalGoal) },
+    { label: "Vollständige Handlung bedacht", ok: /(plan|durchführ|prüf|bewert|reflekt|entscheid)/i.test(`${globalGoal} ${value.behavior}`) },
+  ];
+  return (
+    <section className="overflow-hidden rounded-2xl border border-moss/15 bg-white shadow-sm">
+      <div className="border-b border-ink/10 px-4 py-3">
+        <div className="text-sm font-black text-ink">Situation, Inhalt und beobachtbares Verhalten</div>
+        <div className="text-xs text-ink/45">Bausteine für eine kompetenzorientierte Zielformulierung.</div>
+      </div>
+      <div className="grid gap-4 p-4">
+        <div className="grid gap-3 lg:grid-cols-3">
+          <label className="block">
+            <span className="label">Situation</span>
+            <textarea className="field min-h-24" value={value.situation} onChange={(event) => onChange({ situation: event.target.value })} placeholder="In welcher beruflichen Situation handeln die Lernenden?" />
+          </label>
+          <label className="block">
+            <span className="label">Inhalt</span>
+            <textarea className="field min-h-24" value={value.content} onChange={(event) => onChange({ content: event.target.value })} placeholder="Welcher Inhalt, Gegenstand oder Prozess steht im Mittelpunkt?" />
+          </label>
+          <label className="block">
+            <span className="label">Beobachtbares Verhalten</span>
+            <textarea className="field min-h-24" value={value.behavior} onChange={(event) => onChange({ behavior: event.target.value })} placeholder="Was tun, erklären, entscheiden, prüfen oder bewerten die Lernenden sichtbar?" />
+          </label>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.55fr)]">
+          <div className="rounded-2xl border border-ink/10 bg-sky/5 p-4">
+            <div className="label">Formulierungshilfe</div>
+            <p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-ink">{suggestion || "Fülle einen oder mehrere Bausteine aus, um eine mögliche Formulierung zu sehen."}</p>
+            <button type="button" className="mt-3 rounded-full bg-moss px-4 py-2 text-xs font-bold text-white transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:bg-ink/20" disabled={!suggestion} onClick={onApply}>
+              Vorschlag ins Globalziel übernehmen
+            </button>
+          </div>
+          <div className="rounded-2xl border border-ink/10 bg-paper/70 p-4">
+            <div className="label">Freiwillige Qualitätsprüfung</div>
+            <div className="mt-2 grid gap-2">
+              {checks.map((check) => (
+                <span key={check.label} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold ${check.ok ? "bg-moss/10 text-moss" : "bg-white text-ink/45"}`}>
+                  <Check size={13} className={check.ok ? "" : "opacity-25"} />
+                  {check.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <label className="block">
+          <span className="label">Eigene Notizen zum Lernziel</span>
+          <textarea className="field min-h-20" value={value.notes} onChange={(event) => onChange({ notes: event.target.value })} placeholder="Optional: Was soll beim Ziel später noch geprüft oder geschärft werden?" />
+        </label>
+      </div>
+    </section>
+  );
+}
+
+function QualityReflectionPanel({ plan, totalMinutes }: { plan: Plan; totalMinutes: number }) {
+  const hasCompetencyLevel = plan.competencyNeedAnalysis.selectedFields.some((fieldId) => (plan.competencyNeedAnalysis.selectedLevels[fieldId] ?? []).length > 0);
+  const hasLevelGoal = plan.competencyNeedAnalysis.selectedFields.some((fieldId) => Boolean(plan.competencyNeedAnalysis.entries[fieldId]?.levelGoal?.trim()));
+  const phaseGoals = plan.phases.filter((phase) => phase.goal.trim()).length;
+  const phasesWithActions = plan.phases.filter((phase) => phase.teacherAction.trim() || phase.studentAction.trim()).length;
+  const phasesWithMethods = plan.phases.filter((phase) => phase.methods.trim()).length;
+  const prereqConsidered = Boolean(
+    plan.learningPrerequisites.priorKnowledge.trim()
+    || plan.learningPrerequisites.compact.trim()
+    || plan.learningPrerequisites.groupFactors.length
+    || plan.learningPrerequisites.specialFactors.length
+    || plan.learningPrerequisites.consequences.trim()
+  );
+  const checks = [
+    { label: "Lernziel plausibel", ok: plan.globalGoal.trim().length > 25 && hasObservableVerb(plan.globalGoal), hint: "Situation, Inhalt und beobachtbares Verhalten prüfen." },
+    { label: "Kompetenzniveau passend", ok: hasCompetencyLevel && hasLevelGoal, hint: "Kompetenzfeld, Stufe und konkretes Ziel verbinden." },
+    { label: "Lernaufgaben stimmig", ok: plan.phases.length > 0 && phaseGoals > 0, hint: "Phasenziele mit dem Globalziel abgleichen." },
+    { label: "Methoden unterstützen Ziele", ok: plan.phases.length > 0 && phasesWithMethods > 0 && phasesWithActions > 0, hint: "Lehr-/Lernhandlung, Methode und Medien zusammendenken." },
+    { label: "Adressatenanalyse berücksichtigt", ok: prereqConsidered || plan.targetAudience === "in-service", hint: "Lernvoraussetzungen in Konsequenzen übersetzen." },
+    { label: "Zeitplanung sichtbar", ok: totalMinutes > 0, hint: "Phasenzeiten prüfen und realistische Übergänge einplanen." },
+  ];
+  return (
+    <details className="group/quality rounded-2xl border border-ink/10 bg-white/80 shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-sky/5 [&::-webkit-details-marker]:hidden">
+        <div>
+          <div className="text-sm font-black text-ink">Reflexionscheck</div>
+          <div className="text-xs text-ink/45">Nicht verpflichtend – nur ein kurzer Blick auf mögliche Passungen im Sinne kompetenzorientierter Unterrichtsplanung.</div>
+        </div>
+        <ChevronDown size={16} className="text-ink/35 transition group-open/quality:rotate-180" />
+      </summary>
+      <div className="grid gap-2 border-t border-ink/10 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        {checks.map((check) => (
+          <div key={check.label} className={`rounded-2xl border p-3 ${check.ok ? "border-moss/15 bg-moss/5" : "border-ink/10 bg-paper/70"}`}>
+            <div className={`flex items-center gap-2 text-sm font-black ${check.ok ? "text-moss" : "text-ink/60"}`}>
+              <Check size={15} className={check.ok ? "" : "opacity-25"} />
+              {check.label}
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-ink/45">{check.ok ? "wirkt bereits angelegt" : check.hint}</p>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function CompetencyFormulationHint({ area, dimension, level }: { area: CompetencyArea; dimension: CompetencyDimension; level?: number }) {
+  const dimensionHint = dimensionFormulationHints[dimension];
+  return (
+    <aside className="rounded-2xl border border-moss/15 bg-sky/5 p-4 text-sm leading-relaxed text-ink/70">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-moss">Formulierungshilfe</span>
+        {level && <span className="rounded-full bg-clay/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-clay">Stufe {level}</span>}
+      </div>
+      <p><span className="font-bold text-ink">{areaFormulationHints[area]}</span></p>
+      <p className="mt-1">{dimensionHint.focus}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {dimensionHint.starters.map((starter) => (
+          <span key={starter} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink/60">{starter}</span>
+        ))}
+      </div>
+      {level && <p className="mt-3 text-xs font-semibold text-ink/50">{levelFocusHints[level]}</p>}
+    </aside>
+  );
+}
+
+function LearningSituationReflection({
+  checks,
+  onUpdate,
+}: {
+  checks: Plan["learningSituationChecks"];
+  onUpdate: (id: string, patch: Partial<Plan["learningSituationChecks"][string]>) => void;
+}) {
+  return (
+    <details className="group/ls overflow-hidden rounded-2xl border border-ink/10 bg-white/85 shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-sky/5 [&::-webkit-details-marker]:hidden">
+        <div>
+          <div className="text-sm font-black text-ink">Qualitätscheck Lernsituation</div>
+          <div className="text-xs leading-relaxed text-ink/45">Optionaler Reflexionsraum - keine Bewertung, keine Punktzahl.</div>
+        </div>
+        <ChevronDown size={16} className="shrink-0 text-ink/35 transition group-open/ls:rotate-180" />
+      </summary>
+      <div className="border-t border-ink/10 p-4">
+        <p className="mb-4 max-w-3xl text-xs leading-relaxed text-ink/50">
+          Prüfe bei Bedarf, ob die Lernsituation berufliche Handlung, Lernhandlung, Kompetenzaufbau und Transfer sinnvoll verbindet. Du kannst einzelne Punkte abhaken, kommentieren oder einfach überspringen.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {learningSituationReflectionItems.map((item) => {
+            const entry = checks[item.id] ?? { checked: false, notes: "" };
+            return (
+              <article key={item.id} className={`rounded-2xl border p-4 transition ${entry.checked ? "border-moss/20 bg-moss/5" : "border-ink/10 bg-paper/60"}`}>
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-ink/20 text-moss focus:ring-moss"
+                    checked={entry.checked}
+                    onChange={(event) => onUpdate(item.id, { checked: event.target.checked })}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-black text-ink">{item.title}</span>
+                    <span className="mt-1 block text-sm leading-relaxed text-ink/70">{item.prompt}</span>
+                  </span>
+                </label>
+                <p className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-xs leading-relaxed text-ink/50">{item.hint}</p>
+                <label className="mt-3 block">
+                  <span className="sr-only">Notiz zu {item.title}</span>
+                  <textarea
+                    className="min-h-16 w-full resize-y rounded-xl border border-ink/10 bg-white/85 px-3 py-2 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
+                    value={entry.notes}
+                    onChange={(event) => onUpdate(item.id, { notes: event.target.value })}
+                    placeholder="Optionale Notiz …"
+                  />
+                </label>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </details>
   );
 }
 
@@ -3093,7 +4387,6 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             )}
           </div>
         </div>
-        {!isInServicePdf && (
         <div className={`mt-[4mm] gap-[5mm] rounded-[4mm] border border-ink/10 p-[4mm] ${plan.situationImageDataUrl ? "grid grid-cols-[1fr_42mm]" : ""}`}>
           <div>
             <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Berufliche Anforderung</div>
@@ -3107,7 +4400,6 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             />
           )}
         </div>
-        )}
         <div className="mt-[4mm] grid grid-cols-2 gap-[4mm]">
           <div className={`${isInServicePdf ? "col-span-2" : ""} rounded-[4mm] border border-moss/15 bg-sky/10 p-[4mm]`}>
             <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Globalziel der Unterrichtseinheit</div>
@@ -3244,6 +4536,9 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                   <div className="min-w-0">
                     <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-ink/40">Phase {index + 1}</div>
                     <h2 className="mt-1 font-display text-[15pt] font-bold leading-tight">{phase.title || "Ohne Titel"}</h2>
+                    {phase.shortDescription && (
+                      <p className="mt-1.5 max-w-[125mm] whitespace-pre-wrap text-[8pt] leading-snug text-ink/60">{phase.shortDescription}</p>
+                    )}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="font-display text-[13pt] font-bold">{startsAt}–{endsAt} Uhr</div>
@@ -3251,12 +4546,6 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-[6mm] gap-y-[4mm] p-[5mm] text-[9pt] leading-relaxed">
-                  {phase.shortDescription && (
-                    <div className="col-span-2 rounded-[3mm] bg-paper px-[4mm] py-[2.5mm]">
-                      <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-clay">Kurzbeschreibung der Phase</div>
-                      <p className="mt-1 whitespace-pre-wrap">{phase.shortDescription}</p>
-                    </div>
-                  )}
                   <div>
                     <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Kompetenzorientierte Zielformulierung</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.goal || "—"}</p>
@@ -3345,7 +4634,7 @@ function PrintHeader({ page, title }: { page: string; title: string }) {
 function PrintFooter() {
   return (
     <div className="print-final-footer border-t border-clay/40 pt-2 text-center text-[6.5pt] text-ink/40">
-      <span>{FOOTER_TEXT}</span>
+      <span>{APP_FOOTER_TEXT}</span>
     </div>
   );
 }

@@ -42,6 +42,13 @@ export const initialPlan = (): Plan => ({
   situationImageDataUrl: "",
   situationImageName: "",
   globalGoal: "",
+  goalAssistant: {
+    situation: "",
+    content: "",
+    behavior: "",
+    notes: "",
+  },
+  learningSituationChecks: {},
   learningContent: "",
   observationEnabled: false,
   observationTask: "",

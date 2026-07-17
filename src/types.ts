@@ -7,6 +7,8 @@ export type CompetencyFieldId = `${CompetencyArea}-${CompetencyDimension}`;
 
 export interface CompetencyNeedEntry {
   demand: string;
+  levelGoal: string;
+  levelDescription: string;
   selectedClarifications: string[];
   customClarification: string;
   selectedConsequences: string[];
@@ -61,6 +63,18 @@ export interface LearningPrerequisites {
   customConsequences: Record<string, string>;
 }
 
+export interface GoalAssistant {
+  situation: string;
+  content: string;
+  behavior: string;
+  notes: string;
+}
+
+export interface LearningSituationCheckEntry {
+  checked: boolean;
+  notes: string;
+}
+
 export interface MindmapNode {
   id: string;
   text: string;
@@ -99,6 +113,8 @@ export interface Plan {
   situationImageDataUrl: string;
   situationImageName: string;
   globalGoal: string;
+  goalAssistant: GoalAssistant;
+  learningSituationChecks: Record<string, LearningSituationCheckEntry>;
   learningContent: string;
   observationEnabled: boolean;
   observationTask: string;
