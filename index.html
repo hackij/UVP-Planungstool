@@ -9,19 +9,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx" id="vite-dev-entry"></script>
-    <script>
-      const isLocalDevelopment = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-      if (!isLocalDevelopment) {
-        document.getElementById("vite-dev-entry")?.remove();
-        const stylesheet = document.createElement("link");
-        stylesheet.rel = "stylesheet";
-        stylesheet.href = "./assets/index-D1wg9w3_.css";
-        document.head.appendChild(stylesheet);
-        const appScript = document.createElement("script");
-        appScript.type = "module";
-        appScript.src = "./assets/index-BBd8VZf6.js";
-        document.body.appendChild(appScript);
-      }
-    </script>
   </body>
 </html>
