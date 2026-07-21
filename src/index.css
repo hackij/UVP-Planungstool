@@ -2,9 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color: #0c2340; background: #f4f6f8; font-synthesis: none; }
+:root {
+  color: #0c2340;
+  background: #f4f6f8;
+  font-synthesis: none;
+  --help-background: #f3fbf3;
+  --help-surface: #fbfef9;
+  --help-border: rgba(83, 139, 91, 0.26);
+  --help-accent: #3f7f4a;
+  --help-icon: #5b8d5f;
+}
 * { box-sizing: border-box; overflow-wrap: anywhere; }
+html { scroll-padding-top: calc(var(--uvp-header-height, 96px) + 16px); }
 body { margin: 0; min-width: 320px; min-height: 100vh; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+[id^="section-"] { scroll-margin-top: calc(var(--uvp-header-height, 96px) + 16px); }
 h1, h2, h3, .font-display {
   font-family: "Helvetica Neue Condensed", "HelveticaNeue-CondensedBold", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   font-stretch: condensed;
@@ -20,6 +31,11 @@ textarea { resize: vertical; overflow-wrap: anywhere; word-break: break-word; wh
   .label { @apply mb-2 block text-[11px] font-bold uppercase tracking-[0.13em] text-moss; }
   .field { @apply w-full rounded-xl border border-ink/10 bg-paper/70 px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-moss focus:ring-2 focus:ring-moss/10; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
   .icon-btn { @apply inline-flex h-10 items-center justify-center gap-2 rounded-full border border-ink/10 bg-white px-4 text-sm font-semibold transition hover:border-ink/25 hover:bg-paper; }
+  .help-panel { border-color: var(--help-border); background: var(--help-background); @apply rounded-2xl border text-sm shadow-sm; }
+  .help-panel-summary { color: var(--help-accent); @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left font-bold transition hover:bg-white/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss/20; }
+  .help-panel-surface { border-color: var(--help-border); background: var(--help-surface); @apply rounded-xl border p-3; }
+  .help-accent { color: var(--help-accent); }
+  .help-icon { color: var(--help-icon); }
 }
 
 .timeline-scroll { scrollbar-color: rgba(23,74,135,.38) transparent; scrollbar-width: thin; }
@@ -43,6 +59,16 @@ textarea { resize: vertical; overflow-wrap: anywhere; word-break: break-word; wh
     break-after: page;
     page-break-after: always;
   }
+  .print-title-card,
+  .print-analysis-card,
+  .print-observation-card,
+  .print-concrete-situation-card {
+    display: block;
+    break-inside: avoid !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid;
+  }
   .print-header {
     break-inside: avoid-page;
     page-break-inside: avoid;
@@ -50,19 +76,43 @@ textarea { resize: vertical; overflow-wrap: anywhere; word-break: break-word; wh
   .print-flow {
     background: white;
   }
+  .print-flow-start {
+    break-before: page;
+    page-break-before: always;
+  }
   .print-flow-heading {
     break-inside: avoid-page;
     page-break-inside: avoid;
     break-after: avoid-page;
     page-break-after: avoid;
   }
+  .print-analysis-stack {
+    display: block !important;
+  }
+  .print-analysis-stack > .print-analysis-card {
+    margin-top: 4mm;
+  }
+  .print-analysis-stack > .print-analysis-card:first-child {
+    margin-top: 0;
+  }
+  .print-card-grid,
+  .print-phase-body {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid;
+  }
   .print-phase-card {
-    break-inside: avoid-page;
-    page-break-inside: avoid;
+    display: block;
+    break-inside: avoid !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid;
+    overflow: hidden;
   }
   .print-phase-card-first {
-    break-inside: auto;
-    page-break-inside: auto;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid;
   }
   .print-competency-page {
     break-before: page;

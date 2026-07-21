@@ -43,6 +43,7 @@ export interface Phase {
   differentiation: "Ja" | "Nein" | "Nicht vorgesehen";
   differentiationDetails: DifferentiationDetails;
   competencies: Competencies;
+  competencyFocus: Partial<Record<CompetencyFieldId, string>>;
   color: string;
 }
 
@@ -110,6 +111,7 @@ export interface Plan {
   topic: string;
   className: string;
   situationDescription: string;
+  concreteLearningSituation: string;
   situationImageDataUrl: string;
   situationImageName: string;
   globalGoal: string;

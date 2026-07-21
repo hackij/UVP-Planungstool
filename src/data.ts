@@ -30,6 +30,7 @@ const phase = (title: string, minutes: number, color: string, goal = ""): Phase 
   differentiation: "Nicht vorgesehen",
   differentiationDetails: { up: false, upHow: "", down: false, downHow: "" },
   competencies: emptyCompetencies(),
+  competencyFocus: {},
   color,
 });
 
@@ -39,6 +40,7 @@ export const initialPlan = (): Plan => ({
   topic: "",
   className: "",
   situationDescription: "",
+  concreteLearningSituation: "",
   situationImageDataUrl: "",
   situationImageName: "",
   globalGoal: "",
