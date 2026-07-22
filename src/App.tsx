@@ -54,14 +54,14 @@ const competencyClarificationSuggestions: Record<CompetencyFieldId, string[]> = 
   "sozial-wollen": ["Verantwortung für gemeinsame Ergebnisse übernehmen", "anderen aktiv zuhören", "fair und zuverlässig zusammenarbeiten", "Kompromisse mittragen", "Beiträge anderer wertschätzen"],
 };
 const dimensionConsequenceSuggestions: Record<CompetencyDimension, string[]> = {
-  wissen: ["fachliche Grundlagen bereitstellen", "Vorwissen aktivieren", "Fachbegriffe sichern", "Zusammenhänge visualisieren", "Möglichkeiten zum Erklären und Begründen schaffen"],
-  koennen: ["praktische oder anwendungsbezogene Aufgaben einsetzen", "vollständige Handlungen ermöglichen", "selbstständige Entscheidungen zulassen", "Übungs- und Transfergelegenheiten schaffen", "Ergebnisse prüfen und reflektieren lassen"],
-  wollen: ["berufliche Verantwortung sichtbar machen", "authentische Handlungssituationen verwenden", "Entscheidungsfreiheit ermöglichen", "Qualitätsmaßstäbe transparent machen", "Reflexion über Folgen und Verantwortung anregen"],
+  wissen: ["relevante Fachbegriffe und Regeln kennen", "Zusammenhänge der Tätigkeit verstehen", "Qualitäts- und Sicherheitsanforderungen begründen", "Wissen auf die berufliche Anforderung beziehen"],
+  koennen: ["Arbeitsschritte fachgerecht planen", "Verfahren sachgerecht ausführen", "Entscheidungen im Arbeitsprozess begründen", "Ergebnisse prüfen und bewerten", "auf ähnliche berufliche Situationen übertragen"],
+  wollen: ["Sorgfalt und Verantwortung übernehmen", "Qualitätsmaßstäbe ernst nehmen", "sicherheitsbewusst handeln", "Entscheidungen fachlich vertreten", "Auswirkungen des Handelns berücksichtigen"],
 };
 const areaConsequenceSuggestions: Record<CompetencyArea, string[]> = {
   fach: [],
-  selbst: ["individuelle Verantwortung übertragen", "Selbstkontrolle ermöglichen", "Reflexionsphasen einbauen", "Wahlmöglichkeiten anbieten", "Lernfortschritte sichtbar machen"],
-  sozial: ["Partner- oder Gruppenarbeit nutzen", "klare Rollen vergeben", "kooperative Entscheidungen einfordern", "Kommunikationsregeln vereinbaren", "gemeinsame Verantwortung für Ergebnisse schaffen"],
+  selbst: ["eigene Arbeit strukturieren", "Selbstkontrolle durchführen", "mit Unsicherheit umgehen", "Verantwortung für das Ergebnis übernehmen", "das eigene Vorgehen reflektieren"],
+  sozial: ["Absprachen fachgerecht treffen", "Informationen adressatengerecht weitergeben", "Perspektiven anderer berücksichtigen", "gemeinsam Entscheidungen tragen", "Verantwortung im Team übernehmen"],
 };
 const targetAudienceOptions: { key: TargetAudience; title: string; subtitle: string }[] = [
   { key: "students", title: "Studium", subtitle: "Vollständige Analyse- und Grobplanungsfassung" },
@@ -390,7 +390,7 @@ const dimensionFormulationHints: Record<CompetencyDimension, { focus: string; st
     starters: ["Fachbegriffe sachgerecht verwenden", "Zusammenhänge erklären", "Regeln auf die Situation beziehen"],
   },
   koennen: {
-    focus: "Können macht sichtbar, wie Lernende fachgerecht handeln oder ein Verfahren anwenden.",
+    focus: "Können macht sichtbar, wie eine Fachkraft fachgerecht handelt oder ein Verfahren anwendet.",
     starters: ["Arbeitsschritte planen und ausführen", "Entscheidungen begründen", "Ergebnisse prüfen und verbessern"],
   },
   wollen: {
@@ -406,9 +406,9 @@ const areaFormulationHints: Record<CompetencyArea, string> = {
 };
 
 const levelFocusHints: Record<number, string> = {
-  1: "Stufe 1: wiedergeben, wahrnehmen oder nachmachen – Grundlagen sichtbar machen.",
-  2: "Stufe 2: erklären, einüben oder reagieren – Strukturen verstehen und angeleitet handeln.",
-  3: "Stufe 3: anwenden, verfeinern oder Position beziehen – Transfer und begründete Entscheidungen ermöglichen.",
+  1: "Stufe 1: wiedergeben, wahrnehmen oder nachmachen – Grundlagen der beruflichen Tätigkeit sichtbar machen.",
+  2: "Stufe 2: erklären, einüben oder reagieren – Strukturen verstehen und angeleitet beruflich handeln.",
+  3: "Stufe 3: anwenden, verfeinern oder Position beziehen – Transfer und begründete berufliche Entscheidungen ermöglichen.",
   4: "Stufe 4: Problemlösung, souveränes Handeln und verantwortliche Bewertung – komplex und selbstständig agieren.",
 };
 
@@ -454,8 +454,8 @@ const planningFieldHelps = {
   globalGoal: {
     title: "Hilfe zum Globalziel",
     phase: "Grobplanung",
-    purpose: "Das Globalziel bündelt, welches beruflich bedeutsame Können am Ende der Einheit sichtbar werden soll.",
-    importance: "Es hält Thema, berufliche Anforderung und spätere Lernhandlungen zusammen.",
+    purpose: "Das Globalziel beschreibt, welche berufliche Handlungskompetenz die Schülerinnen und Schüler am Ende der Unterrichtseinheit entwickelt haben sollen.",
+    importance: "Dabei werden Wissen, Können und Wollen in einer beruflichen Handlungssituation zusammengeführt und auf einen gemeinsamen Zielhorizont bezogen.",
     questions: ["In welcher Situation handeln die Lernenden?", "Welcher Inhalt oder Gegenstand steht im Mittelpunkt?", "Woran kann man das Lernen beobachten?"],
     pitfalls: ["nur ein Thema statt eines beobachtbaren Handelns nennen", "zu viele Ziele in einen Satz packen", "Methoden mit Zielen verwechseln"],
     tips: ["Situation, Inhalt und Verhalten knapp verbinden.", "Ein starkes Verb macht das Ziel prüf- und beobachtbar.", "Wissen, Können und Wollen können gemeinsam vorkommen."],
@@ -481,18 +481,18 @@ const planningFieldHelps = {
   competencyAnalysis: {
     title: "Hilfe zur kompetenzorientierten Sachanalyse",
     phase: "Analyse",
-    purpose: "Von der beruflichen Anforderung aus wird bestimmt, welches Wissen, Können und Wollen für deren Bewältigung erforderlich ist.",
-    importance: "Die Sachanalyse sorgt dafür, dass Inhalte nicht als Stoffliste, sondern als Beitrag zur Kompetenzentwicklung ausgewählt werden.",
-    questions: ["Welche fachlichen Zusammenhänge sind tragend?", "Welche Handlungsdimension steht im Vordergrund?", "Welche Kompetenzstufe passt zum Anspruch?"],
+    purpose: "Ausgehend von der beruflichen Anforderung wird analysiert, welche Handlungskompetenz eine Fachkraft zur erfolgreichen Bewältigung der Tätigkeit benötigt.",
+    importance: "So bleibt die Analyse zunächst bei der beruflichen Tätigkeit: Erst danach wird entschieden, was für den Unterricht reduziert, ausgewählt oder aufgebaut wird.",
+    questions: ["Was muss eine Fachkraft in dieser beruflichen Situation verstehen, ausführen und verantworten?", "Welche fachlichen, sozialen oder selbstbezogenen Anforderungen stecken in der Tätigkeit?", "Welche Kompetenzstufe beschreibt den beruflichen Anspruch?"],
     pitfalls: ["zu viele Kompetenzfelder markieren", "Inhalte ohne beruflichen Bezug sammeln", "Zielniveau und Methode verwechseln"],
     tips: ["Arbeite mit wenigen zentralen Feldern.", "Prüfe immer den Rückbezug zur beruflichen Anforderung."],
   },
   competencyNeed: {
     title: "Hilfe zum Kompetenzbedarf",
     phase: "Analyse",
-    purpose: "Hier wird geklärt, welche Kompetenzfelder aus der beruflichen Anforderung besonders bedeutsam werden.",
-    importance: "Die Auswahl macht sichtbar, worauf die Stunde fachlich, sozial oder selbstbezogen zielt.",
-    questions: ["Welche fachliche, personale oder soziale Herausforderung steckt in der Situation?", "Geht es vorrangig um Wissen, Können oder Wollen?", "Welche Stufe passt zum Anspruch der Stunde?"],
+    purpose: "Hier wird noch nicht die Unterrichtsstunde geplant, sondern der Kompetenzbedarf der beruflichen Tätigkeit erschlossen.",
+    importance: "Die berufliche Anforderung ist der Ausgangspunkt: Welche Kompetenzen braucht eine Fachkraft, bevor daraus später ein passendes Unterrichtsziel und eine didaktische Reduktion abgeleitet werden?",
+    questions: ["Welche berufliche Tätigkeit oder Problemstellung muss bewältigt werden?", "Welches Wissen, Können und Wollen braucht eine Fachkraft dafür?", "Welche Kompetenzbereiche und Stufen passen zum Anspruch der Tätigkeit?"],
     pitfalls: ["alle Felder markieren", "Kompetenzstufen ohne Bezug zur Aufgabe wählen", "Zielformulierung und Methode vermischen"],
     tips: ["Wähle wenige tragende Kompetenzfelder.", "Formuliere anschließend konkret, was Lernende auf der Stufe zeigen sollen."],
   },
@@ -526,9 +526,9 @@ const planningFieldHelps = {
   synthesis: {
     title: "Hilfe zur pädagogisch-didaktischen Synthese",
     phase: "Grobplanung",
-    purpose: "Hier werden Analyseergebnisse zu einer konkreten Lernsituation und einem tragfähigen Grobkonzept verbunden.",
-    importance: "Die Synthese macht aus Vorüberlegungen einen Unterricht, in dem Lernende sinnvoll handeln, verstehen und reflektieren können.",
-    questions: ["Wie begegnet die konkrete Lernsituation den Lernenden?", "Welche Lernhandlung wird dadurch angestoßen?", "Wie passen Ziel, Inhalt, Methode und Sicherung zusammen?"],
+    purpose: "Hier werden Analyseergebnisse zu einem konkreten Stundenziel, einer passenden Lernsituation und einem tragfähigen Grobkonzept verbunden.",
+    importance: "Die Synthese übersetzt beruflichen Kompetenzbedarf in eine geplante Lernbewegung für diese Unterrichtsstunde.",
+    questions: ["Welches Kompetenzziel verfolgt diese Stunde konkret?", "Wie operationalisiert die Lernsituation dieses Ziel?", "Wie passen Ziel, Inhalt, Methode und Ergebnissicherung zusammen?"],
     pitfalls: ["nur eine Aufgabe formulieren, aber keine Lernsituation", "Analyseergebnisse im Verlauf nicht wieder aufnehmen"],
     tips: ["Beginne mit der konkreten Situation.", "Prüfe anschließend, ob der rote Faden erkennbar bleibt."],
   },
@@ -602,24 +602,6 @@ const learningSituationReflectionItems = [
     title: "Lernhandlung statt bloßer Ausführung",
     prompt: "Wird das berufliche Handeln mit Verstehen, Begründen, Reflektieren und Systematisieren verbunden?",
     hint: "Die Lernenden sollen nicht nur etwas erledigen, sondern nachvollziehen, warum und wie ihr Handeln fachlich sinnvoll ist.",
-  },
-  {
-    id: "scaffolding",
-    title: "Unterstützung und Öffnung",
-    prompt: "Sind Hilfen, Materialien und Impulse passend dosiert und wird der Handlungsspielraum wieder geöffnet?",
-    hint: "Struktur darf entlasten, sollte aber nicht dauerhaft alles vorgeben. Ziel bleibt zunehmend selbstständiges Situationshandeln.",
-  },
-  {
-    id: "conditions",
-    title: "Lernbedingungen",
-    prompt: "Passen Aufträge, Medien, Raum, Zeit, Rückmeldungen und Unterstützungen zur Lernsituation?",
-    hint: "Die Gestaltung soll Lernen wahrscheinlicher machen: klar, zugänglich, aber nicht unnötig geschlossen.",
-  },
-  {
-    id: "transfer",
-    title: "Sicherung und Transfer",
-    prompt: "Werden Ergebnisse gesichert, fachlich geordnet und auf veränderte Fälle übertragbar gemacht?",
-    hint: "Erst durch Sicherung, Reflexion und Transfer wird aus situativer Aufgabenlösung verfügbare Kompetenz.",
   },
   {
     id: "sustainable-competence",
@@ -827,7 +809,7 @@ const buildCompetencyNeedSummary = (analysis: CompetencyNeedAnalysis) => {
       entry.levelDescription.trim() ? `Eigene Beschreibung der Stufe:\n${entry.levelDescription.trim()}` : "",
       entry.demand.trim() ? `Kompetenzbedarf: ${entry.demand.trim()}` : "",
       clarifications.length ? `Konkretisierung:\n${clarifications.map((item) => `- ${item}`).join("\n")}` : "",
-      consequences.length ? `Konsequenz für den Unterricht:\n${consequences.map((item) => `- ${item}`).join("\n")}` : "",
+      consequences.length ? `Hinweise für die spätere didaktische Reduktion:\n${consequences.map((item) => `- ${item}`).join("\n")}` : "",
     ].filter(Boolean);
     return lines.length > 1 ? [lines.join("\n")] : [];
   });
@@ -1123,7 +1105,7 @@ export default function App() {
   const showCompetencyNeed = isVisible(sectionVisibility(planningConfig, "competencyNeed"));
   const showPlanningHelps = planningConfig.rank < 2;
   const useCompactFlowTitle = isInServiceMode || isAdvancedRefMode;
-  const renderFieldHelp = (help: { title: string; phase: string; purpose: string; importance?: string; questions: readonly string[]; pitfalls: readonly string[]; tips: readonly string[] }) =>
+  const renderFieldHelp = (help: { title: string; phase: string; purpose: string; importance?: string; questions: readonly string[] }) =>
     showPlanningHelps ? <FieldHelp {...help} /> : null;
   const tourSteps = useMemo<TourStep[]>(() => {
     return [
@@ -1735,13 +1717,13 @@ export default function App() {
 
   const renderSituationFileUpload = (compact = false) => (
     <div>
-      <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Datei der Lernsituation</span>
+      <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Material zur Lernsituation</span>
       <input
         ref={situationImageRef}
         className="hidden"
         type="file"
         accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
-        aria-label="Datei der Lernsituation auswählen"
+        aria-label="Material zur Lernsituation auswählen"
         onChange={(event) => uploadSituationImage(event.target.files?.[0])}
       />
       {plan.situationImageDataUrl ? (
@@ -1759,7 +1741,7 @@ export default function App() {
             <span className="flex shrink-0 gap-1.5">
               <button
                 type="button"
-                aria-label="Datei der Lernsituation ersetzen"
+                aria-label="Material zur Lernsituation ersetzen"
                 className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink transition hover:bg-white"
                 onClick={() => situationImageRef.current?.click()}
               >
@@ -1767,7 +1749,7 @@ export default function App() {
               </button>
               <button
                 type="button"
-                aria-label="Datei der Lernsituation entfernen"
+                aria-label="Material zur Lernsituation entfernen"
                 className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-clay transition hover:bg-white"
                 onClick={removeSituationImage}
               >
@@ -2362,6 +2344,23 @@ export default function App() {
               </details>
             )}
             {showConcreteLearningSituation && (
+              <section className="mb-4 rounded-[1.75rem] border border-moss/15 bg-white p-4 shadow-sm sm:p-5">
+                <div className="mb-3">
+                  <div className="label">Ziel der Unterrichtsstunde</div>
+                  <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/50">
+                    Halte hier das konkrete Kompetenzziel fest, von dem aus Lernsituation und Unterrichtsphasen geplant werden.
+                  </p>
+                </div>
+                <textarea
+                  aria-label="Ziel der Unterrichtsstunde"
+                  className="min-h-24 w-full resize-y rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss focus:bg-white"
+                  placeholder="Die Lernenden können …"
+                  value={plan.globalGoal}
+                  onChange={(event) => updatePlan("globalGoal", event.target.value)}
+                />
+              </section>
+            )}
+            {showConcreteLearningSituation && (
             <section data-tour-id="concrete-learning-situation" className="mb-4 rounded-[1.75rem] border border-moss/15 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -2383,7 +2382,7 @@ export default function App() {
                 {isStudentMode && (
                   <details className="group rounded-2xl border border-ink/10 bg-paper/60">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-black text-ink/60 transition hover:bg-white/60 [&::-webkit-details-marker]:hidden">
-                      Datei der Lernsituation hochladen oder verwalten
+                      Material zur Lernsituation hochladen oder verwalten
                       <ChevronDown size={15} className="text-ink/35 transition group-open:rotate-180" />
                     </summary>
                     <div className="border-t border-ink/10 p-4">
@@ -2579,7 +2578,7 @@ export default function App() {
                   <label><span className="label">Zeit in Minuten</span><input className="field" min="1" max="240" type="number" value={selected.minutes} onChange={(e) => updatePhase(selected.id, { minutes: Math.max(0, Number(e.target.value)) })} /></label>
                   <label className="sm:col-span-2"><span className="label">Kurzbeschreibung der Phase</span><textarea className="field min-h-16" placeholder="Welche Funktion hat diese Phase im Unterrichtsverlauf?" value={selected.shortDescription} onChange={(e) => updatePhase(selected.id, { shortDescription: e.target.value })} /></label>
                   {showPhaseGoal && (
-                  <label className="sm:col-span-2"><span className="label">Kompetenzorientierte Zielformulierung</span><textarea className="field min-h-20" placeholder="Die Lernenden können …" value={selected.goal} onChange={(e) => updatePhase(selected.id, { goal: e.target.value })} /></label>
+                  <label className="sm:col-span-2"><span className="label">Kompetenzorientiertes Teilziel</span><textarea className="field min-h-20" placeholder="Die Lernenden können …" value={selected.goal} onChange={(e) => updatePhase(selected.id, { goal: e.target.value })} /></label>
                   )}
                   <label className="sm:col-span-2"><span className="label">Unterrichtsinhalt</span><textarea className="field min-h-24" placeholder="Was wird in dieser Phase fachlich thematisiert?" value={selected.content} onChange={(e) => updatePhase(selected.id, { content: e.target.value })} /></label>
                   {showPhaseModeration && (
@@ -2603,7 +2602,7 @@ export default function App() {
                     </>
                   )}
                   {showPhaseMethods && (
-                  <label className="sm:col-span-2"><span className="label">Methoden & Material</span><textarea className="field min-h-28" placeholder="z. B. Think–Pair–Share, Impulskarte …" value={selected.methods} onChange={(e) => updatePhase(selected.id, { methods: e.target.value })} /></label>
+                  <label className="sm:col-span-2"><span className="label">Methoden & Medien</span><textarea className="field min-h-28" placeholder="z. B. Think–Pair–Share, Impulskarte …" value={selected.methods} onChange={(e) => updatePhase(selected.id, { methods: e.target.value })} /></label>
                   )}
                   <div className="sm:col-span-2">
                     <span className="label">Differenzierung</span>
@@ -3015,32 +3014,39 @@ function OnboardingTour({
   const isSmall = viewportWidth < 760;
   const bubbleWidth = Math.min(390, viewportWidth - 32);
   const targetIsCanvas = Boolean(rect && (rect.width > viewportWidth * 0.78 || rect.height > viewportHeight * 0.62));
+  const constrainedHeight = (top: number) => Math.max(280, viewportHeight - top - 16);
   const bubbleStyle = (() => {
-    if (isSmall) return { left: 16, right: 16, bottom: 16, maxHeight: "calc(100vh - 32px)", overflowY: "auto" as const };
+    if (isSmall) return { left: 16, right: 16, bottom: 16, maxHeight: "calc(100dvh - 32px)" };
     if (!rect || targetIsCanvas) {
       return {
         left: "50%",
         top: "50%",
         transform: "translate(-50%, -50%)",
-        maxHeight: "calc(100vh - 48px)",
-        overflowY: "auto" as const,
+        maxHeight: "calc(100dvh - 48px)",
       };
     }
     const spaceRight = viewportWidth - (rect.left + rect.width);
     const spaceLeft = rect.left;
+    const besideTop = Math.max(16, Math.min(rect.top, viewportHeight - 360));
     if (spaceRight >= bubbleWidth + 28) {
-      return { left: rect.left + rect.width + 18, top: Math.max(16, Math.min(rect.top, viewportHeight - 360)) };
+      return { left: rect.left + rect.width + 18, top: besideTop, maxHeight: constrainedHeight(besideTop) };
     }
     if (spaceLeft >= bubbleWidth + 28) {
-      return { left: rect.left - bubbleWidth - 18, top: Math.max(16, Math.min(rect.top, viewportHeight - 360)) };
+      return { left: rect.left - bubbleWidth - 18, top: besideTop, maxHeight: constrainedHeight(besideTop) };
     }
     const below = rect.top + rect.height + 18;
-    if (below + 320 < viewportHeight) return { left: Math.max(16, Math.min(rect.left, viewportWidth - bubbleWidth - 16)), top: below };
+    if (below + 320 < viewportHeight) {
+      return {
+        left: Math.max(16, Math.min(rect.left, viewportWidth - bubbleWidth - 16)),
+        top: below,
+        maxHeight: constrainedHeight(below),
+      };
+    }
+    const aboveTop = Math.max(16, Math.min(rect.top - 338, viewportHeight - 360));
     return {
       left: Math.max(16, Math.min(rect.left, viewportWidth - bubbleWidth - 16)),
-      top: Math.max(16, Math.min(rect.top - 338, viewportHeight - 360)),
-      maxHeight: "calc(100vh - 48px)",
-      overflowY: "auto" as const,
+      top: aboveTop,
+      maxHeight: constrainedHeight(aboveTop),
     };
   })();
   const isLast = index >= steps.length - 1;
@@ -3076,17 +3082,20 @@ function OnboardingTour({
         <div className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]" aria-hidden="true" />
       )}
       <section
-        className="pointer-events-auto fixed rounded-[1.75rem] border border-ink/10 bg-white/95 p-4 text-ink shadow-soft backdrop-blur-xl sm:p-5"
+        className="pointer-events-auto fixed flex flex-col overflow-hidden rounded-[1.75rem] border border-ink/10 bg-white/95 p-4 text-ink shadow-soft backdrop-blur-xl sm:p-5"
         style={{ width: isSmall ? undefined : bubbleWidth, ...bubbleStyle }}
       >
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <div className="text-[10px] font-black uppercase tracking-[.16em] text-moss">Schritt {index + 1} von {steps.length}</div>
-          <button type="button" className="rounded-full px-2 py-1 text-xs font-bold text-ink/45 transition hover:bg-paper hover:text-ink" onClick={onSkip}>
-            Tour überspringen
-          </button>
+        <div className="shrink-0">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="text-[10px] font-black uppercase tracking-[.16em] text-moss">Schritt {index + 1} von {steps.length}</div>
+            <button type="button" className="rounded-full px-2 py-1 text-xs font-bold text-ink/45 transition hover:bg-paper hover:text-ink" onClick={onSkip}>
+              Tour überspringen
+            </button>
+          </div>
+          <h2 id={titleId} className="font-display text-2xl font-bold">{current.title}</h2>
+          <p id={descId} className="mt-2 text-sm leading-relaxed text-ink/60">{current.description}</p>
         </div>
-        <h2 id={titleId} className="font-display text-2xl font-bold">{current.title}</h2>
-        <p id={descId} className="mt-2 text-sm leading-relaxed text-ink/60">{current.description}</p>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         {current.decisionHelp && (
           <div className="mt-4 grid gap-2 rounded-2xl bg-paper/70 p-3 text-xs leading-relaxed text-ink/60">
             <p><span className="font-black text-ink">Studium:</span> vollständiger Umfang mit Analysen, Modellen, Leitfragen und Formulierungshilfen.</p>
@@ -3240,7 +3249,8 @@ function OnboardingTour({
             </div>
           </div>
         )}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+        </div>
+        <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-ink/10 bg-white/90 pt-3">
           <button type="button" className="rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-bold text-ink/55 transition hover:bg-paper disabled:cursor-not-allowed disabled:opacity-35" disabled={index === 0} onClick={onBack}>
             Zurück
           </button>
@@ -3562,7 +3572,7 @@ function CompetencyNeedCoach({
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-[.14em]" style={{ color: competencyAreaTones[focusedParsed.area].strong }}>Im Fokus bearbeiten</div>
                   <h3 className="mt-1 font-display text-2xl font-bold text-ink">{competencyFieldLabel(focusedFieldId)}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-ink/50">Stufe wählen, Ziel formulieren und daraus konkrete Unterrichtskonsequenzen ableiten.</p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink/50">Stufe wählen und beschreiben, welche Kompetenz eine Fachkraft zur Bewältigung der beruflichen Anforderung benötigt.</p>
                 </div>
                 <button
                   type="button"
@@ -3607,19 +3617,19 @@ function CompetencyNeedCoach({
                     })}
                   </div>
                   <p className={`mt-3 rounded-xl border px-3 py-2 text-xs font-semibold leading-relaxed ${focusedLevel ? "border-ink/10 bg-paper/50 text-ink/55" : "border-dashed border-ink/15 bg-paper/60 text-ink/45"}`}>
-                    {focusedLevel ? levelFocusHints[focusedLevel] : "Erst nach der Stufenwahl erscheinen Zielformulierung und Konsequenzen."}
+                    {focusedLevel ? levelFocusHints[focusedLevel] : "Erst nach der Stufenwahl erscheinen Kompetenzanforderung und Hinweise zur späteren didaktischen Reduktion."}
                   </p>
                 </section>
 
                 <section className="grid self-start content-start gap-3 rounded-2xl border border-ink/10 bg-white p-4">
                   <label className="block">
-                    <span className="label">4 · Konkretes Ziel zur gewählten Stufe</span>
-                    <span className="mb-2 block text-sm font-semibold leading-relaxed text-ink/70">Was sollen die Schülerinnen und Schüler auf dieser Kompetenzstufe konkret erreichen?</span>
+                    <span className="label">4 · Kompetenzanforderung zur gewählten Stufe</span>
+                    <span className="mb-2 block text-sm font-semibold leading-relaxed text-ink/70">Was muss eine Fachkraft auf dieser Kompetenzstufe konkret bewältigen können?</span>
                     <textarea
                       className="field min-h-24 bg-white"
                       value={focusedEntry.levelGoal}
                       onChange={(event) => updateEntry(focusedFieldId, { levelGoal: event.target.value })}
-                      placeholder="Die Schülerinnen und Schüler …"
+                      placeholder="Eine Fachkraft kann …"
                     />
                   </label>
                   <details className="group/need-extra rounded-2xl border border-ink/10 bg-paper/60">
@@ -3663,14 +3673,14 @@ function CompetencyNeedCoach({
                           className="field min-h-20 bg-white"
                           value={focusedEntry.customClarification}
                           onChange={(event) => updateEntry(focusedFieldId, { customClarification: event.target.value })}
-                          placeholder="Welche konkrete Formulierung passt zu deiner Unterrichtseinheit?"
+                          placeholder="Welche konkrete Formulierung beschreibt die berufliche Anforderung?"
                         />
                       </div>
                     </details>
                   </section>
 
                   <section className="rounded-2xl border border-ink/10 bg-white p-4">
-                    <div className="label">5 · Konsequenzen für die Unterrichtsgestaltung</div>
+                    <div className="label">5 · Hinweise für die spätere didaktische Reduktion</div>
                     <div className="grid gap-2">
                       {focusedConsequences.map((suggestion) => (
                         <DiagnosticCheckbox
@@ -3683,7 +3693,7 @@ function CompetencyNeedCoach({
                     </div>
                     <details className="group/own-consequence mt-3 rounded-2xl border border-ink/10 bg-paper/60">
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs font-black uppercase tracking-[.12em] text-ink/45 transition hover:bg-white [&::-webkit-details-marker]:hidden">
-                        Eigene Konsequenz ergänzen
+                        Eigenen Hinweis ergänzen
                         <ChevronDown size={14} className="transition group-open/own-consequence:rotate-180" />
                       </summary>
                       <div className="border-t border-ink/10 p-3">
@@ -3691,7 +3701,7 @@ function CompetencyNeedCoach({
                           className="field min-h-20 bg-white"
                           value={focusedEntry.customConsequence}
                           onChange={(event) => updateEntry(focusedFieldId, { customConsequence: event.target.value })}
-                          placeholder="Welche zusätzliche Konsequenz ergibt sich für deine konkrete Planung?"
+                          placeholder="Was sollte später bei der didaktischen Reduktion berücksichtigt werden?"
                         />
                       </div>
                     </details>
@@ -3704,12 +3714,12 @@ function CompetencyNeedCoach({
       )}
 
       <label className="block rounded-[1.35rem] border border-moss/15 bg-sky/5 p-4">
-        <span className="label">Kompetenzbedarf der Unterrichtseinheit</span>
+        <span className="label">Beruflicher Kompetenzbedarf</span>
         <textarea
           className="field min-h-40 bg-white"
           value={value.summary}
           onChange={(event) => commit({ ...value, summary: event.target.value }, false)}
-          placeholder="Ausgewählte Kompetenzfelder, Kompetenzbedarfe, Konkretisierungen und Konsequenzen werden hier automatisch zusammengeführt und bleiben bearbeitbar."
+          placeholder="Ausgewählte Kompetenzfelder, Kompetenzanforderungen, Konkretisierungen und Hinweise zur späteren didaktischen Reduktion werden hier automatisch zusammengeführt und bleiben bearbeitbar."
         />
       </label>
     </div>
@@ -5081,16 +5091,12 @@ function FieldHelp({
   purpose,
   importance,
   questions,
-  pitfalls,
-  tips,
 }: {
   title: string;
   phase: string;
   purpose: string;
   importance?: string;
   questions: readonly string[];
-  pitfalls: readonly string[];
-  tips: readonly string[];
 }) {
   return (
     <details className="help-panel group/help text-sm">
@@ -5111,9 +5117,9 @@ function FieldHelp({
           <div className="mb-1.5 text-[10px] font-black uppercase tracking-[.12em] help-accent">Warum ist das wichtig?</div>
           <p>{importance ?? "Dieser Schritt hilft, die Planung stimmig, nachvollziehbar und auf das Lernen der Schülerinnen und Schüler bezogen zu halten."}</p>
         </div>
-        <MiniHelpList title="Leitfragen" items={questions} />
-        <MiniHelpList title="Darauf achten" items={pitfalls} />
-        <MiniHelpList title="Praktische Tipps" items={tips} />
+        <div className="md:col-span-3">
+          <MiniHelpList title="Leitfragen" items={questions} />
+        </div>
       </div>
     </details>
   );
@@ -5176,16 +5182,17 @@ function GoalAssistantPanel({
             <p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-ink">{suggestion || "Fülle einen oder mehrere Bausteine aus, um eine mögliche Formulierung zu sehen."}</p>
             <details className="help-panel group/examples mt-3 text-sm">
               <summary className="help-panel-summary px-3 py-2.5 text-xs [&::-webkit-details-marker]:hidden">
-                Beispiele für kompetenzorientierte Formulierungen
+                Aufbau kompetenzorientierter Zielformulierungen
                 <ChevronDown size={14} className="shrink-0 text-ink/35 transition group-open/examples:rotate-180" />
               </summary>
               <div className="grid gap-2 border-t border-[color:var(--help-border)] p-3 text-xs leading-relaxed text-ink/65">
-                <p><span className="font-black text-ink">Grundstruktur: </span>Situation, Inhalt/Gegenstand, beobachtbares Verhalten und ggf. Qualitätsanforderung verbinden.</p>
+                <p>
+                  <span className="font-black text-ink">Grundstruktur: </span>
+                  Ein kompetenzorientiertes Ziel verbindet eine berufliche Anforderung oder Handlungssituation, einen fachlichen Inhalt bzw. Gegenstand, ein beobachtbares Verhalten und bei Bedarf Qualitätsanforderungen oder Rahmenbedingungen.
+                </p>
                 {[
                   ["Metalltechnik", "Die Schülerinnen und Schüler können für eine vorgegebene Dachfläche den erforderlichen Materialbedarf ermitteln und ihre Auswahl fachlich begründen."],
                   ["Elektrotechnik", "Die Schülerinnen und Schüler können eine einfache elektrische Schaltung anhand eines Schaltplans aufbauen, prüfen und auftretende Fehler systematisch eingrenzen."],
-                  ["Mechatronik", "Die Schülerinnen und Schüler können eine pneumatische Anlage anhand einer Kundenbeschreibung analysieren und geeignete Maßnahmen zur Fehlerbehebung ableiten."],
-                  ["Kaufmännischer Bereich", "Die Schülerinnen und Schüler können ein Kundenangebot unter Berücksichtigung wirtschaftlicher und rechtlicher Vorgaben erstellen und ihre Entscheidung nachvollziehbar begründen."],
                 ].map(([area, example]) => (
                   <div key={area} className="help-panel-surface px-3 py-2">
                     <div className="text-[10px] font-black uppercase tracking-[.12em] help-accent">{area}</div>
@@ -5303,15 +5310,15 @@ function LearningSituationReflection({
   return (
     <details className="group/ls overflow-hidden rounded-2xl border border-ink/10 bg-white/85 shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-sky/5 [&::-webkit-details-marker]:hidden">
-        <div>
-          <div className="text-sm font-black text-ink">Qualitätscheck Lernsituation</div>
-          <div className="text-xs leading-relaxed text-ink/45">Optionaler Reflexionsraum - keine Bewertung, keine Punktzahl.</div>
+          <div>
+            <div className="text-sm font-black text-ink">Qualitätscheck Lernsituation</div>
+          <div className="text-xs leading-relaxed text-ink/45">Optionaler Blick auf das Grobkonzept - keine Bewertung, keine Punktzahl.</div>
         </div>
         <ChevronDown size={16} className="shrink-0 text-ink/35 transition group-open/ls:rotate-180" />
       </summary>
       <div className="border-t border-ink/10 p-4">
         <p className="mb-4 max-w-3xl text-xs leading-relaxed text-ink/50">
-          Prüfe bei Bedarf, ob die Lernsituation berufliche Handlung, Lernhandlung, Kompetenzaufbau und Transfer sinnvoll verbindet. Du kannst einzelne Punkte abhaken oder einfach überspringen.
+          Prüfe bei Bedarf, ob die konkrete Lernsituation als Ausgangspunkt des Grobkonzepts tragfähig ist. Der Check bewertet nicht die fertige Unterrichtsplanung; du kannst einzelne Punkte abhaken oder einfach überspringen.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           {learningSituationReflectionItems.map((item) => {
@@ -6442,7 +6449,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                 <div className="print-phase-body grid grid-cols-2 gap-x-[6mm] gap-y-[4mm] p-[5mm] text-[9pt] leading-relaxed">
                   {isVisible(pdfConfig.phaseCompetencyGoal) && (
                   <div>
-                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Kompetenzorientierte Zielformulierung</div>
+                    <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Kompetenzorientiertes Teilziel</div>
                     <p className="mt-1 whitespace-pre-wrap">{phase.goal || "—"}</p>
                   </div>
                   )}
@@ -6467,7 +6474,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                       </div>
                       {isVisible(pdfConfig.phaseMethods) && (
                       <div className="col-span-2">
-                        <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Methoden & Material</div>
+                        <div className="text-[7pt] font-bold uppercase tracking-[.13em] text-moss">Methoden & Medien</div>
                         <p className="mt-1 whitespace-pre-wrap">{phase.methods || "—"}</p>
                       </div>
                       )}
