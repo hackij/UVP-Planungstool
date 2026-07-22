@@ -1,7 +1,7 @@
 import { Fragment, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, Check, ChevronDown, ChevronRight, ClipboardCheck, Clock3, Download, FileDown, Grid3X3,
-  GripVertical, ImagePlus, LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Trash2, Upload, X,
+  ExternalLink, GripVertical, ImagePlus, LibraryBig, Menu, Plus, Printer, RotateCcw, Save, Sparkles, Trash2, Upload, X,
 } from "lucide-react";
 import { emptyCompetencyNeedAnalysis, initialPlan, PHASE_COLORS, phaseTemplate } from "./data.ts";
 import { EXAM_CRITERIA, EXAM_CRITERIA_COUNT } from "./criteria.ts";
@@ -17,6 +17,7 @@ const SCHOOL_LOGO = "./bs1-logo-hell.png";
 const SEMINAR_LOGO = "./seminar-metalltechnik-logo.png";
 const UVP_STUDIO_LOGO = "./logo-concepts/uvp-studio-logo-final-v2.png";
 const HKM_REFERENCE_IMAGE = "./handlungskompetenzmatrix-dier-referenz-ohne-caption.png";
+const AI_REQUIREMENT_CHECK_URL = "https://m365.cloud.microsoft/chat/agent/T_8d596a8f-16ff-5a4c-c989-87206706ff9e.073aa836-060c-4760-8698-daed581234d4";
 const LEGACY_PHASE_COLORS = new Set([
   "#e97b58", "#89c5d2", "#d9f45f", "#efb95d", "#9fa8dc", "#7fc6a4", "#ef9fbb",
   "#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268",
@@ -1059,6 +1060,8 @@ export default function App() {
   const [tourActive, setTourActive] = useState(false);
   const [tourIndex, setTourIndex] = useState(0);
   const [tourRect, setTourRect] = useState<DOMRect | null>(null);
+  const [aiCheckOpen, setAiCheckOpen] = useState(false);
+  const [aiCheckStatus, setAiCheckStatus] = useState<"idle" | "copied" | "copy-failed" | "popup-blocked">("idle");
   const importRef = useRef<HTMLInputElement>(null);
   const situationImageRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -1294,7 +1297,7 @@ export default function App() {
   }, [planningOverviewItems]);
 
   useEffect(() => {
-    if (!criteriaOpen && !verbCatalogOpen && !usmOpen && activeUsmItem == null && !competenceModelOpen && activeCompetenceItem == null && !hkmOpen && !aboutOpen && !welcomeOpen && !tourActive) return;
+    if (!criteriaOpen && !verbCatalogOpen && !usmOpen && activeUsmItem == null && !competenceModelOpen && activeCompetenceItem == null && !hkmOpen && !aboutOpen && !welcomeOpen && !tourActive && !aiCheckOpen) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (tourActive) {
@@ -1307,6 +1310,10 @@ export default function App() {
       if (welcomeOpen) {
         markOnboardingLaterForSession();
         setWelcomeOpen(false);
+        return;
+      }
+      if (aiCheckOpen) {
+        setAiCheckOpen(false);
         return;
       }
       setCriteriaOpen(false);
@@ -1325,7 +1332,7 @@ export default function App() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
     };
-  }, [criteriaOpen, verbCatalogOpen, usmOpen, activeUsmItem, competenceModelOpen, activeCompetenceItem, hkmOpen, aboutOpen, welcomeOpen, tourActive]);
+  }, [criteriaOpen, verbCatalogOpen, usmOpen, activeUsmItem, competenceModelOpen, activeCompetenceItem, hkmOpen, aboutOpen, welcomeOpen, tourActive, aiCheckOpen]);
 
   useEffect(() => {
     if (!tourActive) return;
@@ -1715,6 +1722,46 @@ export default function App() {
     if (situationImageRef.current) situationImageRef.current.value = "";
   };
 
+  const launchAiRequirementCheck = () => {
+    const requirement = plan.situationDescription.trim();
+    if (!requirement) return;
+
+    const width = Math.min(620, Math.max(440, window.screen.availWidth - 80));
+    const height = Math.min(780, Math.max(600, window.screen.availHeight - 100));
+    const left = Math.max(0, window.screenX + window.outerWidth - width - 32);
+    const top = Math.max(0, window.screenY + 48);
+    const popup = window.open(
+      AI_REQUIREMENT_CHECK_URL,
+      "uvp-studio-ki-check",
+      `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`,
+    );
+    if (popup) popup.opener = null;
+
+    setAiCheckOpen(true);
+    setAiCheckStatus("idle");
+    if (!navigator.clipboard?.writeText) {
+      setAiCheckStatus(popup ? "copy-failed" : "popup-blocked");
+      return;
+    }
+    navigator.clipboard.writeText(requirement).then(
+      () => setAiCheckStatus(popup ? "copied" : "popup-blocked"),
+      () => setAiCheckStatus(popup ? "copy-failed" : "popup-blocked"),
+    );
+  };
+
+  const renderAiCheckButton = () => (
+    <button
+      type="button"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-moss/20 bg-white px-3 py-1.5 text-[11px] font-black text-moss shadow-sm transition hover:border-moss/35 hover:bg-sky/10 disabled:cursor-not-allowed disabled:opacity-40"
+      onClick={launchAiRequirementCheck}
+      disabled={!plan.situationDescription.trim()}
+      title={plan.situationDescription.trim() ? "Berufliche Anforderung mit dem KI-Assistenten prüfen" : "Formuliere zuerst eine berufliche Anforderung"}
+    >
+      <Sparkles size={14} />
+      KI-Check
+    </button>
+  );
+
   const renderSituationFileUpload = (compact = false) => (
     <div>
       <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Material zur Lernsituation</span>
@@ -1798,8 +1845,11 @@ export default function App() {
           />
         </label>
         {showProfessionalRequirement && (
-        <label data-tour-id="professional-requirement" className="block rounded-2xl border border-ink/10 bg-paper/60 p-4">
-          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</span>
+        <div data-tour-id="professional-requirement" className="block rounded-2xl border border-ink/10 bg-paper/60 p-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label htmlFor="professional-requirement-field" className="block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</label>
+            {renderAiCheckButton()}
+          </div>
           <textarea
             id="professional-requirement-field"
             aria-label="Berufliche Anforderung"
@@ -1808,7 +1858,7 @@ export default function App() {
             value={plan.situationDescription}
             onChange={(event) => updatePlan("situationDescription", event.target.value)}
           />
-        </label>
+        </div>
         )}
         <div className={`rounded-2xl border border-ink/10 bg-paper/60 p-4 ${showProfessionalRequirement ? "" : "lg:col-span-2"}`}>
           {renderSituationFileUpload(true)}
@@ -2117,8 +2167,11 @@ export default function App() {
                         </label>
                         <div className={`mb-5 grid gap-4 ${showProfessionalRequirement ? "sm:grid-cols-[minmax(0,1fr)_220px]" : "sm:grid-cols-[minmax(0,280px)]"}`}>
                           {showProfessionalRequirement && (
-                          <label data-tour-id="professional-requirement" className="block">
-                            <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</span>
+                          <div data-tour-id="professional-requirement" className="block">
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <label htmlFor="professional-requirement-field" className="block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</label>
+                              {renderAiCheckButton()}
+                            </div>
                             <textarea
                               id="professional-requirement-field"
                               aria-label="Berufliche Anforderung"
@@ -2126,7 +2179,7 @@ export default function App() {
                               placeholder="Welche berufliche Anforderung, welcher Auftrag oder welches Problem bildet den Handlungsanlass?"
                               value={plan.situationDescription} onChange={(e) => updatePlan("situationDescription", e.target.value)}
                             />
-                          </label>
+                          </div>
                           )}
                           {!isStudentMode && renderSituationFileUpload()}
                         </div>
@@ -2902,8 +2955,84 @@ export default function App() {
           onComplete={completeOnboarding}
         />
       )}
+      {aiCheckOpen && (
+        <AiRequirementCheckOverlay
+          requirement={plan.situationDescription}
+          status={aiCheckStatus}
+          onOpenAgent={launchAiRequirementCheck}
+          onClose={() => setAiCheckOpen(false)}
+        />
+      )}
       <PrintDocument plan={plan} totalMinutes={totalMinutes} />
     </>
+  );
+}
+
+function AiRequirementCheckOverlay({
+  requirement,
+  status,
+  onOpenAgent,
+  onClose,
+}: {
+  requirement: string;
+  status: "idle" | "copied" | "copy-failed" | "popup-blocked";
+  onOpenAgent: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-ink/40 px-4 py-6 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ai-requirement-check-title"
+    >
+      <section className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-soft">
+        <header className="flex items-start justify-between gap-4 border-b border-ink/10 bg-sky/10 px-5 py-4 sm:px-6">
+          <div>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-moss">
+              <Sparkles size={14} />
+              KI-Check · Probelauf
+            </div>
+            <h2 id="ai-requirement-check-title" className="mt-1 font-display text-2xl font-bold text-ink">Berufliche Anforderung prüfen</h2>
+          </div>
+          <button
+            type="button"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-ink/45 transition hover:text-ink"
+            aria-label="KI-Check beenden"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className="grid gap-4 px-5 py-5 sm:px-6">
+          <p className="text-sm leading-relaxed text-ink/60">
+            Der Microsoft-KI-Assistent wurde in einem separaten kleinen Fenster geöffnet. Deine Eingabe bleibt hier während der Prüfung klar sichtbar.
+          </p>
+          <div className="rounded-2xl border-2 border-moss/25 bg-white p-4 shadow-sm">
+            <div className="mb-2 text-[10px] font-black uppercase tracking-[.14em] text-moss">Berufliche Anforderung</div>
+            <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-ink">{requirement}</p>
+          </div>
+
+          <div className={`rounded-2xl px-4 py-3 text-xs font-semibold leading-relaxed ${status === "popup-blocked" ? "border border-clay/20 bg-clay/5 text-clay" : "border border-moss/15 bg-moss/5 text-ink/60"}`}>
+            {status === "copied" && "Der Text wurde in die Zwischenablage kopiert. Füge ihn im KI-Agenten ein, damit er die Formulierung prüfen kann."}
+            {status === "copy-failed" && "Der Text konnte nicht automatisch kopiert werden. Markiere die Formulierung oben und füge sie im KI-Agenten ein."}
+            {status === "popup-blocked" && "Das externe Fenster wurde vermutlich vom Browser blockiert. Erlaube Pop-up-Fenster für UVP Studio und klicke anschließend auf „KI-Agent öffnen“."}
+            {status === "idle" && "Der KI-Agent wird geöffnet und die Formulierung für die Übergabe vorbereitet …"}
+          </div>
+        </div>
+
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 bg-paper/60 px-5 py-4 sm:px-6">
+          <button type="button" className="rounded-full px-4 py-2 text-sm font-bold text-ink/50 transition hover:bg-white hover:text-ink" onClick={onClose}>
+            KI-Check beenden
+          </button>
+          <button type="button" className="inline-flex items-center gap-2 rounded-full bg-moss px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-moss/90" onClick={onOpenAgent}>
+            <ExternalLink size={16} />
+            KI-Agent öffnen
+          </button>
+        </footer>
+      </section>
+    </div>
   );
 }
 
