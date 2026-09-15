@@ -36,5 +36,5 @@ Es gibt kein Backend. Planungsdaten bleiben in `localStorage` des jeweiligen Bro
 
 Die Schaltfläche **PDF exportieren** öffnet den Druckdialog. Dort „Als PDF sichern“ wählen. Das Druckstylesheet erzeugt genau zwei A4-Seiten:
 
-1. Thema, Globalziel und Unterrichtsverlauf
+1. Unterrichtsthema, Lernsituation, Gesamtziel der Stunde und Unterrichtsverlauf
 2. Handlungskompetenzmatrix und Erläuterungen

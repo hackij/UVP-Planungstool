@@ -41,6 +41,7 @@ export const initialPlan = (): Plan => ({
   className: "",
   situationDescription: "",
   concreteLearningSituation: "",
+  requiredLearningOutcomes: "",
   situationImageDataUrl: "",
   situationImageName: "",
   globalGoal: "",

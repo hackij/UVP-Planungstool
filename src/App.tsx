@@ -22,9 +22,9 @@ const LEGACY_PHASE_COLORS = new Set([
   "#e5b5b8", "#b9cfe9", "#d8e7f7", "#d98d92", "#8fb0d7", "#c8d9ed", "#bd6268",
 ]);
 const areas: { key: CompetencyArea; label: string; short: string }[] = [
-  { key: "fach", label: "Fachkompetenz", short: "Fach" },
-  { key: "selbst", label: "Selbstkompetenz", short: "Selbst" },
-  { key: "sozial", label: "Sozialkompetenz", short: "Sozial" },
+  { key: "fach", label: "I. Sach-/Fachkompetenz", short: "Fach" },
+  { key: "sozial", label: "II.1 Sozialkompetenz", short: "Sozial" },
+  { key: "selbst", label: "II.2 Selbstkompetenz", short: "Selbst" },
 ];
 const dimensions: { key: CompetencyDimension; label: string }[] = [
   { key: "wissen", label: "Wissen" }, { key: "koennen", label: "Können" }, { key: "wollen", label: "Wollen" },
@@ -54,7 +54,7 @@ const competencyClarificationSuggestions: Record<CompetencyFieldId, string[]> = 
   "sozial-wollen": ["Verantwortung für gemeinsame Ergebnisse übernehmen", "anderen aktiv zuhören", "fair und zuverlässig zusammenarbeiten", "Kompromisse mittragen", "Beiträge anderer wertschätzen"],
 };
 const dimensionConsequenceSuggestions: Record<CompetencyDimension, string[]> = {
-  wissen: ["relevante Fachbegriffe und Regeln kennen", "Zusammenhänge der Tätigkeit verstehen", "Qualitäts- und Sicherheitsanforderungen begründen", "Wissen auf die berufliche Anforderung beziehen"],
+  wissen: ["relevante Fachbegriffe und Regeln kennen", "Zusammenhänge der Tätigkeit verstehen", "Qualitäts- und Sicherheitsanforderungen begründen", "Wissen auf die berufliche Anforderungssituation beziehen"],
   koennen: ["Arbeitsschritte fachgerecht planen", "Verfahren sachgerecht ausführen", "Entscheidungen im Arbeitsprozess begründen", "Ergebnisse prüfen und bewerten", "auf ähnliche berufliche Situationen übertragen"],
   wollen: ["Sorgfalt und Verantwortung übernehmen", "Qualitätsmaßstäbe ernst nehmen", "sicherheitsbewusst handeln", "Entscheidungen fachlich vertreten", "Auswirkungen des Handelns berücksichtigen"],
 };
@@ -318,9 +318,9 @@ const competenceModelItems = [
   },
 ] as const;
 const hkmModelAreas: { key: CompetencyArea; title: string; subtitle: string; description: string }[] = [
-  { key: "fach", title: "Fachkompetenz", subtitle: "Umgang mit der Sache", description: "Fachliche Anforderungen verstehen, begründen und sachgerecht in beruflichen Anforderungssituationen bearbeiten." },
-  { key: "sozial", title: "Sozialkompetenz", subtitle: "Umgang mit anderen", description: "Kommunizieren, kooperieren, Perspektiven berücksichtigen und gemeinsame Verantwortung für Handlungsergebnisse übernehmen." },
-  { key: "selbst", title: "Selbstkompetenz", subtitle: "Umgang mit sich selbst", description: "Eigenständig, reflektiert und verantwortlich mit Anforderungen, Fehlern, Unsicherheit und dem eigenen Lernprozess umgehen." },
+  { key: "fach", title: "I. Sach-/Fachkompetenz", subtitle: "Umgang mit der Sache", description: "Fachliche Anforderungen verstehen, begründen und sachgerecht in beruflichen Anforderungssituationen bearbeiten." },
+  { key: "sozial", title: "II.1 Sozialkompetenz", subtitle: "Umgang mit anderen", description: "Kommunizieren, kooperieren, Perspektiven berücksichtigen und gemeinsame Verantwortung für Handlungsergebnisse übernehmen." },
+  { key: "selbst", title: "II.2 Selbstkompetenz", subtitle: "Umgang mit sich selbst", description: "Eigenständig, reflektiert und verantwortlich mit Anforderungen, Fehlern, Unsicherheit und dem eigenen Lernprozess umgehen." },
 ];
 const hkmModelDimensions: { key: CompetencyDimension; title: string; code: string; description: string }[] = [
   { key: "wissen", title: "Wissen", code: "A", description: "Begriffe, Regeln und Zusammenhänge verfügbar machen, damit Handeln verstanden und begründet werden kann." },
@@ -452,9 +452,9 @@ const hexToRgb = (hex: string) => {
 
 const planningFieldHelps = {
   globalGoal: {
-    title: "Hilfe zum Globalziel",
+    title: "Hilfe zum Gesamtziel der Stunde",
     phase: "Grobplanung",
-    purpose: "Das Globalziel beschreibt, welche berufliche Handlungskompetenz die Schülerinnen und Schüler am Ende der Unterrichtseinheit entwickelt haben sollen.",
+    purpose: "Das Gesamtziel beschreibt, welche berufliche Handlungskompetenz die Schülerinnen und Schüler am Ende der Unterrichtsstunde entwickelt haben sollen.",
     importance: "Dabei werden Wissen, Können und Wollen in einer beruflichen Handlungssituation zusammengeführt und auf einen gemeinsamen Zielhorizont bezogen.",
     questions: ["In welcher Situation handeln die Lernenden?", "Welcher Inhalt oder Gegenstand steht im Mittelpunkt?", "Woran kann man das Lernen beobachten?"],
     pitfalls: ["nur ein Thema statt eines beobachtbaren Handelns nennen", "zu viele Ziele in einen Satz packen", "Methoden mit Zielen verwechseln"],
@@ -465,8 +465,8 @@ const planningFieldHelps = {
     phase: "Analyse",
     purpose: "Hier werden nur solche Rahmenbedingungen geklärt, die die Unterrichtsplanung tatsächlich beeinflussen.",
     importance: "Die Analyse verhindert, dass Thema, Ressourcen oder Vorgaben später lose neben dem Unterrichtsverlauf stehen.",
-    questions: ["Welche Vorgaben sind verbindlich?", "Welche Ressourcen oder Grenzen prägen die Stunde?", "Warum ist die berufliche Anforderung für diesen Bildungsgang bedeutsam?"],
-    pitfalls: ["alles sammeln, aber nichts für die Planung nutzen", "Berufliche Anforderung und konkrete Lernsituation vermischen"],
+    questions: ["Welche Vorgaben sind verbindlich?", "Welche Ressourcen oder Grenzen prägen die Stunde?", "Wie ist das Unterrichtsthema curricular eingeordnet?"],
+    pitfalls: ["alles sammeln, aber nichts für die Planung nutzen", "curriculare Vorgaben und berufliche Anforderungssituation vermischen"],
     tips: ["Formuliere knapp und entscheidungsrelevant.", "Notiere nur, was später bei Ziel, Inhalt, Methode oder Zeit eine Rolle spielt."],
   },
   directResources: {
@@ -481,7 +481,7 @@ const planningFieldHelps = {
   competencyAnalysis: {
     title: "Hilfe zur kompetenzorientierten Sachanalyse",
     phase: "Analyse",
-    purpose: "Ausgehend von der beruflichen Anforderung wird analysiert, welche Handlungskompetenz eine Fachkraft zur erfolgreichen Bewältigung der Tätigkeit benötigt.",
+    purpose: "Ausgehend von einer realen beruflichen Anforderungssituation wird analysiert, welche Handlungskompetenz eine Fachkraft zur erfolgreichen Bewältigung benötigt.",
     importance: "So bleibt die Analyse zunächst bei der beruflichen Tätigkeit: Erst danach wird entschieden, was für den Unterricht reduziert, ausgewählt oder aufgebaut wird.",
     questions: ["Was muss eine Fachkraft in dieser beruflichen Situation verstehen, ausführen und verantworten?", "Welche fachlichen, sozialen oder selbstbezogenen Anforderungen stecken in der Tätigkeit?", "Welche Kompetenzstufe beschreibt den beruflichen Anspruch?"],
     pitfalls: ["zu viele Kompetenzfelder markieren", "Inhalte ohne beruflichen Bezug sammeln", "Zielniveau und Methode verwechseln"],
@@ -491,7 +491,7 @@ const planningFieldHelps = {
     title: "Hilfe zum Kompetenzbedarf",
     phase: "Analyse",
     purpose: "Hier wird noch nicht die Unterrichtsstunde geplant, sondern der Kompetenzbedarf der beruflichen Tätigkeit erschlossen.",
-    importance: "Die berufliche Anforderung ist der Ausgangspunkt: Welche Kompetenzen braucht eine Fachkraft, bevor daraus später ein passendes Unterrichtsziel und eine didaktische Reduktion abgeleitet werden?",
+    importance: "Die berufliche Anforderungssituation ist der Ausgangspunkt: Welche Kompetenzen braucht eine Fachkraft, bevor Inhalte didaktisch reduziert und an die Lerngruppe angepasst werden?",
     questions: ["Welche berufliche Tätigkeit oder Problemstellung muss bewältigt werden?", "Welches Wissen, Können und Wollen braucht eine Fachkraft dafür?", "Welche Kompetenzbereiche und Stufen passen zum Anspruch der Tätigkeit?"],
     pitfalls: ["alle Felder markieren", "Kompetenzstufen ohne Bezug zur Aufgabe wählen", "Zielformulierung und Methode vermischen"],
     tips: ["Wähle wenige tragende Kompetenzfelder.", "Formuliere anschließend konkret, was Lernende auf der Stufe zeigen sollen."],
@@ -503,7 +503,7 @@ const planningFieldHelps = {
     importance: "Sie macht deutlich, welche Inhalte wesentlich sind und welche nur Beiwerk wären.",
     questions: ["Was ist fachlich unverzichtbar?", "Was kann reduziert oder später vertieft werden?", "Welche Inhalte tragen direkt zum Ziel bei?"],
     pitfalls: ["Stoffsammlung ohne Auswahl", "Inhalte ohne Bezug zur Handlungssituation", "zu viele Begriffe für eine Stunde"],
-    tips: ["Ordne Inhalte räumlich oder bündle sie nach Funktion.", "Markiere Kerninhalte anders als Vertiefungen."],
+    tips: ["Ordne und verknüpfe Inhaltskarten zu einer Mindmap oder Concept Map.", "Markiere Kerninhalte anders als Vertiefungen."],
   },
   addressAnalysis: {
     title: "Hilfe zur Adressatenanalyse",
@@ -526,20 +526,20 @@ const planningFieldHelps = {
   synthesis: {
     title: "Hilfe zur pädagogisch-didaktischen Synthese",
     phase: "Grobplanung",
-    purpose: "Hier werden Analyseergebnisse zu einem konkreten Stundenziel, einer passenden Lernsituation und einem tragfähigen Grobkonzept verbunden.",
+    purpose: "Hier werden Analyseergebnisse und didaktische Reduktion zu einer passenden Lernsituation, einem Gesamtziel der Stunde und erforderlichen Lernergebnissen verbunden.",
     importance: "Die Synthese übersetzt beruflichen Kompetenzbedarf in eine geplante Lernbewegung für diese Unterrichtsstunde.",
-    questions: ["Welches Kompetenzziel verfolgt diese Stunde konkret?", "Wie operationalisiert die Lernsituation dieses Ziel?", "Wie passen Ziel, Inhalt, Methode und Ergebnissicherung zusammen?"],
+    questions: ["Welche Lernsituation entsteht aus Anforderung, Inhalt und Lerngruppe?", "Welches Gesamtziel verfolgt die Stunde?", "Welche erforderlichen Lernergebnisse müssen am Ende erreicht sein?"],
     pitfalls: ["nur eine Aufgabe formulieren, aber keine Lernsituation", "Analyseergebnisse im Verlauf nicht wieder aufnehmen"],
     tips: ["Beginne mit der konkreten Situation.", "Prüfe anschließend, ob der rote Faden erkennbar bleibt."],
   },
   concreteLearningSituation: {
-    title: "Hilfe zur konkreten Lernsituation",
+    title: "Hilfe zur Lernsituation der Unterrichtsstunde",
     phase: "Synthese",
-    purpose: "Die konkrete Lernsituation beschreibt, wie die berufliche Anforderung für diese Lerngruppe und diesen Unterricht erlebbar wird.",
+    purpose: "Die Lernsituation entsteht aus der didaktisch reduzierten beruflichen Anforderungssituation und wird an die konkrete Lerngruppe angepasst.",
     importance: "Sie ist der didaktische Einstiegspunkt für Lernhandlung, Aufgaben und Reflexion.",
     questions: ["Welche Situation begegnet den Lernenden konkret?", "Welcher Handlungsbedarf wird sichtbar?", "Welche Entscheidung oder Bearbeitung wird eröffnet?"],
     pitfalls: ["nur das Thema wiederholen", "eine fertige Schrittfolge statt eines Handlungsspielraums vorgeben"],
-    tips: ["Formuliere aus Sicht der Lernenden.", "Halte beruflichen Anlass, Lerngruppe und Lernprozess zusammen."],
+    tips: ["Formuliere aus Sicht der Lernenden.", "Halte beruflichen Anlass, didaktische Reduktion und Lerngruppe zusammen."],
   },
   flow: {
     title: "Hilfe zum Unterrichtsverlaufplan",
@@ -569,13 +569,13 @@ const planningFieldHelps = {
     tips: ["Notiere bei Materialien kurz ihre Funktion.", "Prüfe, ob die Sozialform wirklich zur Lerngruppe passt."],
   },
   resultsTransfer: {
-    title: "Hilfe zu Ergebnissicherung und Transfer",
-    phase: "Feinplanung",
-    purpose: "Ergebnisse sollen sichtbar, fachlich geordnet und auf neue Situationen übertragbar werden.",
-    importance: "Erst Sicherung, Reflexion und Transfer machen Lernergebnisse dauerhaft verfügbar.",
-    questions: ["Was wird am Ende sichtbar gesichert?", "Wie begründen Lernende ihre Ergebnisse?", "Wo wird eine Übertragung auf neue Fälle vorbereitet?"],
-    pitfalls: ["Sicherung nur als Tafelbild verstehen", "Transfer zeitlich nicht einplanen"],
-    tips: ["Plane eine kurze fachliche Systematisierung.", "Lass Lernende prüfen, was in ähnlichen Situationen gilt."],
+    title: "Hilfe zu erforderlichen Lernergebnissen",
+    phase: "Grobplanung",
+    purpose: "Erforderliche Lernergebnisse beschreiben, was am Ende der Stunde als fachlich tragfähiges Ergebnis erreicht sein muss.",
+    importance: "Sie ergeben sich aus Lernsituation und Gesamtziel und geben dem späteren Unterrichtsverlauf eine klare Richtung.",
+    questions: ["Welche Lernergebnisse müssen am Ende erreicht sein?", "Wie zeigen sie das Gesamtziel der Stunde?", "Welche Ergebnisse sind für den weiteren Lernprozess unverzichtbar?"],
+    pitfalls: ["bereits eine konkrete Sicherungsmethode festlegen", "Ergebnisse nur als Material oder Produkt benennen"],
+    tips: ["Formuliere beobachtbar und ergebnisbezogen.", "Trenne das erforderliche Ergebnis von seiner späteren methodischen Sicherung."],
   },
 } as const;
 const learningSituationReflectionItems = [
@@ -614,7 +614,7 @@ const USM_ITEMS = [
   { id: 1, title: "Mündigkeit", short: "Mündigkeit", description: "Langfristiges Ziel beruflicher Bildung: Lernende sollen eigenverantwortlich, fachlich begründet und verantwortungsbewusst handeln können.", question: "Wie unterstützt die Stunde selbstständiges und verantwortliches Handeln?", x: 50, y: 7, tone: "maturity", layer: "Übergeordnete Zielebene" },
   { id: 2, title: "Bildungserfolg", short: "Bildungserfolg", description: "Einzelne Unterrichtseinheiten tragen langfristig zur Kompetenzentwicklung bei. Bildungserfolg meint mehr als kurzfristige Leistung.", question: "Welchen Beitrag leistet die Stunde zum langfristigen Kompetenzaufbau?", x: 50, y: 20, tone: "success", layer: "Ergebnisebene" },
   { id: 3, title: "Lernergebnisse", short: "Lernergebnisse", description: "Lernergebnisse machen sichtbar, welche Kompetenzen am Ende beobachtbar geworden sind.", question: "Woran erkennst du, dass Lernen tatsächlich stattgefunden hat?", x: 50, y: 34, tone: "planning", layer: "Planungsebene" },
-  { id: 4, title: "Ziele", short: "Ziele", description: "Ziele klären, welche Kompetenzen aufgebaut werden sollen. Sie steuern Inhalte, Methoden, Medien und Ergebnissicherung.", question: "Welche Kompetenz soll am Ende in der beruflichen Situation sichtbar werden?", x: 71, y: 43, tone: "planning", layer: "Planungsebene" },
+  { id: 4, title: "Ziele", short: "Ziele", description: "Ziele klären, welche Kompetenzen aufgebaut werden sollen. Sie steuern Inhalte, Methoden, Medien und die erforderlichen Lernergebnisse.", question: "Welche Kompetenz soll am Ende in der beruflichen Situation sichtbar werden?", x: 71, y: 43, tone: "planning", layer: "Planungsebene" },
   { id: 5, title: "Inhalte", short: "Inhalte", description: "Inhalte werden danach ausgewählt, ob sie zur Kompetenzentwicklung in der beruflichen Anforderung beitragen.", question: "Was ist wesentlich, was kann reduziert oder später vertieft werden?", x: 73, y: 53, tone: "planning", layer: "Planungsebene" },
   { id: 6, title: "Methoden", short: "Methoden", description: "Methoden unterstützen aktive Kompetenzentwicklung, wenn sie zum Ziel, zur Lerngruppe und zur beruflichen Handlung passen.", question: "Welche Lernhandlung ermöglicht Verstehen, Begründen, Üben oder Transfer?", x: 62, y: 62, tone: "planning", layer: "Planungsebene" },
   { id: 7, title: "Medien", short: "Medien", description: "Analoge und digitale Medien sollen Verstehen, Handeln, Zusammenarbeit oder selbstständiges Lernen sinnvoll unterstützen.", question: "Welches Medium hilft wirklich beim Lernen - und nicht nur bei der Darstellung?", x: 38, y: 62, tone: "planning", layer: "Planungsebene" },
@@ -871,6 +871,7 @@ const normalizePlan = (candidate: unknown): Plan => {
         ? partial.targetAudience as TargetAudience
         : fallback.targetAudience,
     concreteLearningSituation: typeof partial.concreteLearningSituation === "string" ? partial.concreteLearningSituation : fallback.concreteLearningSituation,
+    requiredLearningOutcomes: typeof partial.requiredLearningOutcomes === "string" ? partial.requiredLearningOutcomes : fallback.requiredLearningOutcomes,
     learningPrerequisites: {
       ...fallback.learningPrerequisites,
       ...(partial.learningPrerequisites ?? {}),
@@ -1104,7 +1105,7 @@ export default function App() {
   const showCompetencyProfile = isVisible(sectionVisibility(planningConfig, "competencyProfile"));
   const showCompetencyNeed = isVisible(sectionVisibility(planningConfig, "competencyNeed"));
   const showPlanningHelps = planningConfig.rank < 2;
-  const useCompactFlowTitle = isInServiceMode || isAdvancedRefMode;
+  const useCompactFlowTitle = isInServiceMode;
   const renderFieldHelp = (help: { title: string; phase: string; purpose: string; importance?: string; questions: readonly string[] }) =>
     showPlanningHelps ? <FieldHelp {...help} /> : null;
   const tourSteps = useMemo<TourStep[]>(() => {
@@ -1153,7 +1154,7 @@ export default function App() {
     if (showCompactContentFrame) {
       items.push({
         id: "section-content-frame",
-        label: "Inhaltliche Rahmenbedingungen",
+        label: isInServiceMode ? "Kompakte Planung" : "Planungsgrundlage",
         hasContent: Boolean(plan.topic.trim() || plan.situationDescription.trim() || plan.globalGoal.trim()),
       });
     }
@@ -1221,7 +1222,7 @@ export default function App() {
     items.push({
       id: "section-synthesis",
       label: useCompactFlowTitle ? "Unterrichtsverlauf" : "Päd.-didaktische Synthese",
-      hasContent: Boolean((showConcreteLearningSituation && plan.concreteLearningSituation.trim()) || plan.phases.length),
+      hasContent: Boolean((showConcreteLearningSituation && (plan.concreteLearningSituation.trim() || plan.globalGoal.trim() || plan.requiredLearningOutcomes.trim())) || plan.phases.length),
       group: true,
     });
     if (!isInServiceMode) {
@@ -1778,9 +1779,9 @@ export default function App() {
     <section id="section-content-frame" data-tour-id="compact-content-frame" className="scroll-mt-36 mt-6 rounded-[2rem] border border-moss/15 bg-white p-5 shadow-soft sm:p-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="label">Inhaltliche Ausrichtung</div>
-          <h2 className="font-display text-2xl font-bold">Inhaltliche Rahmenbedingungen</h2>
-          <p className="mt-1 text-sm leading-relaxed text-ink/50">Kompakte Klärung von Thema, beruflichem Handlungsanlass und Ziel der Unterrichtseinheit.</p>
+          <div className="label">Kompakte Planungsgrundlage</div>
+          <h2 className="font-display text-2xl font-bold">Unterrichtsthema und Ausgangspunkt</h2>
+          <p className="mt-1 text-sm leading-relaxed text-ink/50">{isInServiceMode ? "Kompakte Klärung von Thema und Gesamtziel für die schnelle Unterrichtsplanung." : "Kompakte Klärung von Unterrichtsthema und realer beruflicher Anforderungssituation."}</p>
         </div>
       </div>
       <div className="mb-4">
@@ -1788,35 +1789,36 @@ export default function App() {
       </div>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)]">
         <label className="rounded-2xl border border-ink/10 bg-paper/60 p-4 lg:col-span-2">
-          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Thema / Titel der Lernsituation</span>
+          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Unterrichtsthema</span>
           <input
-            aria-label="Thema / Titel der Lernsituation"
+            aria-label="Unterrichtsthema"
             className="w-full border-0 border-b border-ink/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-ink/25 focus:border-moss sm:text-3xl"
-            placeholder="Thema oder Titel der Lernsituation"
+            placeholder="Thema der Unterrichtsstunde"
             value={plan.topic}
             onChange={(event) => updatePlan("topic", event.target.value)}
           />
         </label>
         {showProfessionalRequirement && (
         <label data-tour-id="professional-requirement" className="block rounded-2xl border border-ink/10 bg-paper/60 p-4">
-          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</span>
+          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderungssituation</span>
+          <span className="mb-2 block text-xs leading-relaxed text-ink/45">Kurzfassung des realen beruflichen Handlungsanlasses – keine allgemeine Rahmenbedingung und noch nicht die Lernsituation.</span>
           <textarea
             id="professional-requirement-field"
-            aria-label="Berufliche Anforderung"
+            aria-label="Berufliche Anforderungssituation"
             className="min-h-[132px] w-full rounded-xl border border-ink/10 bg-white/70 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
-            placeholder="Welche berufliche Anforderung, welcher Auftrag oder welches Problem bildet den Handlungsanlass?"
+            placeholder="Welche reale berufliche Situation mit welchen komplexen Anforderungen bildet den Ausgangspunkt?"
             value={plan.situationDescription}
             onChange={(event) => updatePlan("situationDescription", event.target.value)}
           />
         </label>
         )}
-        <div className={`rounded-2xl border border-ink/10 bg-paper/60 p-4 ${showProfessionalRequirement ? "" : "lg:col-span-2"}`}>
+        {isInServiceMode && <div className="rounded-2xl border border-ink/10 bg-paper/60 p-4 lg:col-span-2">
           {renderSituationFileUpload(true)}
-        </div>
-        <label className="block rounded-2xl border border-moss/15 bg-sky/10 p-4">
-          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-moss">Globalziel der Unterrichtseinheit</span>
+        </div>}
+        {isInServiceMode && <label className="block rounded-2xl border border-moss/15 bg-sky/10 p-4 lg:col-span-2">
+          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-moss">Gesamtziel der Stunde</span>
           <textarea
-            aria-label="Globalziel der Unterrichtseinheit"
+            aria-label="Gesamtziel der Stunde"
             className="min-h-[132px] w-full rounded-xl border border-ink/10 bg-white/80 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
             placeholder="Die Lernenden können …"
             value={plan.globalGoal}
@@ -1833,7 +1835,7 @@ export default function App() {
               />
             </div>
           )}
-        </label>
+        </label>}
       </div>
     </section>
   );
@@ -2089,12 +2091,14 @@ export default function App() {
                 <div>
                   <div className="label">Planungsraum</div>
                   <h1 className="font-display text-3xl font-bold sm:text-4xl">Analysen & Grobplanung</h1>
-                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">Öffne nacheinander die Analysebereiche, wenn du die jeweiligen Details bearbeiten möchtest.</p>
+                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink/55">Arbeite von curricularen Vorgaben über die berufliche Anforderungssituation und Analysen bis zur didaktischen Synthese.</p>
                 </div>
                 <div className="rounded-full bg-sky/15 px-3 py-1.5 text-xs font-bold text-moss">
                   {targetAudienceOptions.find((option) => option.key === plan.targetAudience)?.title ?? "Planungsstand"}
                 </div>
               </div>
+
+              <PlanningLogicStrip compact={isAdvancedRefMode} />
 
               <div className="grid gap-3">
                 {showContextAnalysis && (
@@ -2103,49 +2107,18 @@ export default function App() {
                   <div className="mb-3">
                     {renderFieldHelp(planningFieldHelps.contextAnalysis)}
                   </div>
-                  <PlanningSubAccordion title="Allgemeine Rahmenbedingungen klären">
+                  <PlanningSubAccordion title="Unterrichtsthema klären">
                     <div className="grid gap-6">
                       <div>
                         <label className="mb-5 block">
-                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Thema / Lernsituation</span>
+                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[.14em] text-ink/45">Unterrichtsthema</span>
                           <input
-                            aria-label="Thema / Lernsituation"
+                            aria-label="Unterrichtsthema"
                             className="w-full border-0 border-b border-ink/15 bg-transparent pb-2 font-display text-2xl font-bold outline-none placeholder:text-ink/25 focus:border-moss sm:text-3xl"
-                            placeholder="Thema oder Titel der Lernsituation"
+                            placeholder="Thema der Unterrichtsstunde"
                             value={plan.topic} onChange={(e) => updatePlan("topic", e.target.value)}
                           />
                         </label>
-                        <div className={`mb-5 grid gap-4 ${showProfessionalRequirement ? "sm:grid-cols-[minmax(0,1fr)_220px]" : "sm:grid-cols-[minmax(0,280px)]"}`}>
-                          {showProfessionalRequirement && (
-                          <label data-tour-id="professional-requirement" className="block">
-                            <span className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">Berufliche Anforderung</span>
-                            <textarea
-                              id="professional-requirement-field"
-                              aria-label="Berufliche Anforderung"
-                              className="min-h-[132px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss"
-                              placeholder="Welche berufliche Anforderung, welcher Auftrag oder welches Problem bildet den Handlungsanlass?"
-                              value={plan.situationDescription} onChange={(e) => updatePlan("situationDescription", e.target.value)}
-                            />
-                          </label>
-                          )}
-                          {!isStudentMode && renderSituationFileUpload()}
-                        </div>
-                        <label className="mb-2 block text-[11px] font-bold uppercase tracking-[.14em] text-ink/45">{isInServiceMode ? "Gesamtziel der Unterrichtseinheit" : "Globalziel der Unterrichtseinheit"}</label>
-                        <textarea
-                          aria-label="Globalziel"
-                          className="min-h-[88px] w-full rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-lg leading-relaxed text-ink outline-none placeholder:text-ink/25 focus:border-moss sm:text-xl"
-                          placeholder="Die Lernenden können …"
-                          value={plan.globalGoal} onChange={(e) => updatePlan("globalGoal", e.target.value)}
-                        />
-                        <div className="mt-3 grid gap-2">
-                          {renderFieldHelp(planningFieldHelps.globalGoal)}
-                          {showGoalAssistant && <GoalAssistantPanel
-                            value={plan.goalAssistant}
-                            globalGoal={plan.globalGoal}
-                            onChange={updateGoalAssistant}
-                            onApply={applyGoalSuggestion}
-                          />}
-                        </div>
                       </div>
                     </div>
                   </PlanningSubAccordion>
@@ -2207,7 +2180,7 @@ export default function App() {
                     <PlanningSubAccordion title="Kompetenzbedarf ermitteln">
                       <ProfessionalRequirementReference
                         value={plan.situationDescription}
-                        onEdit={() => goToPlanSection(showContextAnalysis ? "section-context-analysis" : "section-content-frame", "professional-requirement-field")}
+                        onChange={(value) => updatePlan("situationDescription", value)}
                       />
                       {renderFieldHelp(planningFieldHelps.competencyNeed)}
                       <CompetencyNeedCoach
@@ -2219,6 +2192,10 @@ export default function App() {
                   )}
                   <PlanningSubAccordion title="Lerninhalte analysieren, strukturieren und auswählen">
                     {renderFieldHelp(planningFieldHelps.learningContent)}
+                    <div className="mb-4 rounded-2xl border border-moss/15 bg-sky/5 px-4 py-3">
+                      <div className="text-xs font-black uppercase tracking-[.12em] text-moss">Mindmap / Concept Map</div>
+                      <p className="mt-1 text-sm leading-relaxed text-ink/55">Ordne die Inhaltskarten räumlich an und verknüpfe fachliche Zusammenhänge. So entsteht schrittweise eine Mindmap oder Concept Map der relevanten Lerninhalte.</p>
+                    </div>
                     {showContentBubbleBoard && !contentBubbleOptional && (
                       <ContentBubbleBoard
                         bubbles={plan.contentBubbles}
@@ -2256,6 +2233,18 @@ export default function App() {
                     )}
                     {!showContentBubbleBoard && !showCompactLearningContent && (
                       <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-ink/50">Dieser Bereich ist im aktuellen Planungsstand ausgeblendet.</div>
+                    )}
+                    {showPlanningHelps && (
+                      <label className="mt-4 block rounded-2xl border border-ink/10 bg-paper/60 p-4">
+                        <span className="label">Didaktische Reduktion</span>
+                        <span className="mb-2 block text-sm leading-relaxed text-ink/50">Welche fachlichen Inhalte und Komplexitäten werden für diese Lerngruppe ausgewählt, vereinfacht, strukturiert oder zurückgestellt?</span>
+                        <textarea
+                          className="field min-h-28 bg-white"
+                          value={plan.didacticConsiderations}
+                          onChange={(event) => updatePlan("didacticConsiderations", event.target.value)}
+                          placeholder="Begründe Auswahl, Schwerpunktsetzung und Reduktion mit Blick auf Kompetenzbedarf und Lerngruppe."
+                        />
+                      </label>
                     )}
                   </PlanningSubAccordion>
                 </PlanningAccordion>
@@ -2339,47 +2328,29 @@ export default function App() {
                 <div className="grid gap-2 border-t border-[color:var(--help-border)] p-3">
                   {renderFieldHelp(planningFieldHelps.synthesis)}
                   {renderFieldHelp(planningFieldHelps.flow)}
-                  {showPlanningHelps && <QualityReflectionPanel plan={plan} totalMinutes={totalMinutes} />}
                 </div>
               </details>
-            )}
-            {showConcreteLearningSituation && (
-              <section className="mb-4 rounded-[1.75rem] border border-moss/15 bg-white p-4 shadow-sm sm:p-5">
-                <div className="mb-3">
-                  <div className="label">Ziel der Unterrichtsstunde</div>
-                  <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/50">
-                    Halte hier das konkrete Kompetenzziel fest, von dem aus Lernsituation und Unterrichtsphasen geplant werden.
-                  </p>
-                </div>
-                <textarea
-                  aria-label="Ziel der Unterrichtsstunde"
-                  className="min-h-24 w-full resize-y rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss focus:bg-white"
-                  placeholder="Die Lernenden können …"
-                  value={plan.globalGoal}
-                  onChange={(event) => updatePlan("globalGoal", event.target.value)}
-                />
-              </section>
             )}
             {showConcreteLearningSituation && (
             <section data-tour-id="concrete-learning-situation" className="mb-4 rounded-[1.75rem] border border-moss/15 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="label">Konkrete Lernsituation</div>
+                  <div className="label">Lernsituation der Unterrichtsstunde</div>
                   <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/50">
-                    Formuliere hier die konkrete beruflich gerahmte Situation, in der die Schülerinnen und Schüler handeln und lernen.
+                    Formuliere die aus der realen beruflichen Anforderungssituation didaktisch reduzierte und an die Lerngruppe angepasste Lernsituation.
                   </p>
                 </div>
               </div>
               <div className="grid gap-3">
                 {renderFieldHelp(planningFieldHelps.concreteLearningSituation)}
                 <textarea
-                  aria-label="Konkrete Lernsituation"
+                  aria-label="Lernsituation der Unterrichtsstunde"
                   className="min-h-28 w-full resize-y rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss focus:bg-white"
                   placeholder="Beschreibe die konkrete Situation, mit der die Lernenden im Unterricht konfrontiert werden …"
                   value={plan.concreteLearningSituation}
                   onChange={(event) => updatePlan("concreteLearningSituation", event.target.value)}
                 />
-                {isStudentMode && (
+                {!isInServiceMode && (
                   <details className="group rounded-2xl border border-ink/10 bg-paper/60">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-black text-ink/60 transition hover:bg-white/60 [&::-webkit-details-marker]:hidden">
                       Material zur Lernsituation hochladen oder verwalten
@@ -2396,13 +2367,53 @@ export default function App() {
               </div>
             </section>
             )}
-            {showLearningSituationCheck && (
-              <div className="mb-5">
-                <LearningSituationReflection
-                  checks={plan.learningSituationChecks}
-                  onUpdate={updateLearningSituationCheck}
+            {showConcreteLearningSituation && (
+              <section className="mb-4 rounded-[1.75rem] border border-moss/15 bg-white p-4 shadow-sm sm:p-5">
+                <div className="mb-3">
+                  <div className="label">Gesamtziel der Stunde</div>
+                  <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/50">Formuliere das übergeordnete, kompetenzorientierte Ziel, das aus Lernsituation und Analysen folgt.</p>
+                </div>
+                <textarea
+                  aria-label="Gesamtziel der Stunde"
+                  className="min-h-24 w-full resize-y rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss focus:bg-white"
+                  placeholder="Die Lernenden können …"
+                  value={plan.globalGoal}
+                  onChange={(event) => updatePlan("globalGoal", event.target.value)}
                 />
-              </div>
+                {showGoalAssistant && <div className="mt-3 grid gap-2">
+                  {renderFieldHelp(planningFieldHelps.globalGoal)}
+                  <GoalAssistantPanel value={plan.goalAssistant} globalGoal={plan.globalGoal} onChange={updateGoalAssistant} onApply={applyGoalSuggestion} />
+                </div>}
+              </section>
+            )}
+            {!isInServiceMode && (
+              <section className="mb-4 rounded-[1.75rem] border border-moss/15 bg-white p-4 shadow-sm sm:p-5">
+                <div className="label">Erforderliche Lernergebnisse</div>
+                <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/50">Welche Lernergebnisse müssen am Ende der Unterrichtsstunde erreicht sein? Beschreibe das Ergebnis, noch nicht die konkrete Form der Sicherung.</p>
+                <div className="mt-3 grid gap-3">
+                  {renderFieldHelp(planningFieldHelps.resultsTransfer)}
+                  <textarea
+                    aria-label="Erforderliche Lernergebnisse"
+                    className="min-h-24 w-full resize-y rounded-2xl border border-ink/10 bg-paper/60 px-4 py-3 text-sm leading-relaxed text-ink outline-none placeholder:text-ink/30 focus:border-moss focus:bg-white"
+                    placeholder="Am Ende der Stunde liegt vor bzw. ist erkennbar …"
+                    value={plan.requiredLearningOutcomes}
+                    onChange={(event) => updatePlan("requiredLearningOutcomes", event.target.value)}
+                  />
+                </div>
+              </section>
+            )}
+            {!isInServiceMode && (
+              <section className="mb-5 rounded-[1.75rem] border border-clay/20 bg-white p-4 shadow-sm sm:p-5">
+                <div className="mb-3">
+                  <div className="label text-clay">Abschluss der Grobplanung</div>
+                  <h3 className="font-display text-xl font-bold text-ink">Grobplanungscheck</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-ink/50">Prüfe vor der weiteren Unterrichtsplanung, ob die zentralen didaktischen Entscheidungen schlüssig aufeinander abgestimmt sind.</p>
+                </div>
+                <div className="grid gap-3">
+                  <QualityReflectionPanel plan={plan} totalMinutes={totalMinutes} />
+                  {showLearningSituationCheck && <LearningSituationReflection checks={plan.learningSituationChecks} onUpdate={updateLearningSituationCheck} />}
+                </div>
+              </section>
             )}
             {plan.phases.length === 0 ? (
               <div className="rounded-[2rem] border border-dashed border-ink/15 bg-white px-6 py-12 text-center">
@@ -3432,7 +3443,7 @@ function CompetencyNeedCoach({
           </div>
           {!compact && (
             <p className="mb-4 text-sm leading-relaxed text-ink/55">
-              Wähle die Kompetenzfelder aus, die aus der beruflichen Anforderung besonders wichtig werden. Die Markierungen in der Matrix dienen später als Grundlage für das Kompetenzprofil.
+              Wähle die Kompetenzfelder aus, die sich aus der beruflichen Anforderungssituation ergeben. Die Markierungen in der Matrix dienen später als Grundlage für das Kompetenzprofil.
             </p>
           )}
           <div className="mx-auto max-w-6xl">
@@ -3673,7 +3684,7 @@ function CompetencyNeedCoach({
                           className="field min-h-20 bg-white"
                           value={focusedEntry.customClarification}
                           onChange={(event) => updateEntry(focusedFieldId, { customClarification: event.target.value })}
-                          placeholder="Welche konkrete Formulierung beschreibt die berufliche Anforderung?"
+                          placeholder="Welche konkrete Formulierung beschreibt die berufliche Anforderungssituation?"
                         />
                       </div>
                     </details>
@@ -4118,27 +4129,40 @@ function PlanningOverview({
   );
 }
 
-function ProfessionalRequirementReference({ value, onEdit }: { value: string; onEdit: () => void }) {
-  const text = value.trim();
+function PlanningLogicStrip({ compact = false }: { compact?: boolean }) {
+  const steps = compact
+    ? ["Vorgaben", "berufliche Anforderungssituation", "reduzierte Analyse", "Lernsituation", "Gesamtziel", "Grobplanungscheck", "Verlauf"]
+    : ["Lehrplan / Vorgaben", "berufliche Anforderungssituation", "Kompetenzbedarf & Sachanalyse", "Adressatenanalyse", "didaktische Reduktion", "Lernsituation", "Gesamtziel der Stunde", "erforderliche Lernergebnisse", "Grobplanungscheck", "Unterrichtsverlaufplan"];
   return (
-    <aside className="help-panel mb-4 p-4 text-sm leading-relaxed">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="label !mb-1 help-accent">Ausgangspunkt: berufliche Anforderung</div>
-          {text ? (
-            <p className="whitespace-pre-wrap text-ink/70">{text}</p>
-          ) : (
-            <p className="text-ink/40">Formuliere zunächst die berufliche Anforderung im vorherigen Planungsbereich.</p>
-          )}
-        </div>
-        <button
-          type="button"
-          className="shrink-0 rounded-full border border-[color:var(--help-border)] bg-white px-3 py-2 text-xs font-bold help-accent transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss/20"
-          onClick={onEdit}
-        >
-          Berufliche Anforderung bearbeiten
-        </button>
-      </div>
+    <nav className="mb-6 rounded-2xl border border-moss/15 bg-sky/5 px-4 py-3" aria-label="Fachliche Planungslogik">
+      <div className="mb-2 text-[10px] font-black uppercase tracking-[.14em] text-moss">Fachliche Planungslogik</div>
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold leading-relaxed text-ink/55">
+        {steps.map((step, index) => (
+          <Fragment key={step}>
+            <li>{step}</li>
+            {index < steps.length - 1 && <li aria-hidden="true" className="text-clay/55">→</li>}
+          </Fragment>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+function ProfessionalRequirementReference({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <aside data-tour-id="professional-requirement" className="help-panel mb-4 p-4 text-sm leading-relaxed">
+      <label className="block">
+        <span className="label !mb-1 help-accent">Berufliche Anforderungssituation</span>
+        <span className="mb-3 block text-sm text-ink/55">Beschreibe hier eine reale berufliche Situation, aus der sich die für den Unterricht relevanten Kompetenzanforderungen ableiten lassen. Sie ist nicht mit der später didaktisch reduzierten Lernsituation gleichzusetzen.</span>
+        <textarea
+          id="professional-requirement-field"
+          aria-label="Berufliche Anforderungssituation"
+          className="field min-h-28 bg-white"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Welche reale berufliche Situation mit welchen komplexen Anforderungen muss eine Fachkraft bewältigen?"
+        />
+      </label>
     </aside>
   );
 }
@@ -4734,7 +4758,7 @@ function HkmModelModal({ onNavigate, onClose }: { onNavigate: (step: "competence
             <div className="label">Modelle → Handlungskompetenzmatrix</div>
             <h2 id="hkm-title" className="font-display text-2xl font-bold sm:text-3xl">Handlungskompetenzmatrix</h2>
             <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">
-              Ein kompakter Blick auf die Handlungskompetenzmatrix: berufliche Anforderung, Kompetenzbereiche, Handlungsdimensionen und Stufen.
+              Ein kompakter Blick auf die Handlungskompetenzmatrix: berufliche Anforderungssituation, Kompetenzbereiche, Handlungsdimensionen und Stufen.
             </p>
           </div>
           <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-paper text-ink/60 transition hover:bg-clay/10 hover:text-clay" onClick={onClose} aria-label="Handlungskompetenzmatrix schließen">
@@ -4807,7 +4831,7 @@ function HkmModelExplorer() {
   const modelInfo = (() => {
     if (currentKey === "requirement") {
       return {
-        title: "Berufliche Anforderung",
+        title: "Berufliche Anforderungssituation",
         kicker: "Ausgangspunkt",
         body: "Die Anforderungssituation gibt der Kompetenzentwicklung Sinn: Was müssen Lernende in einer beruflichen Situation verstehen, können und verantworten?",
         hint: "Von hier aus werden Kompetenzbereich, Handlungsdimension und Zielniveau abgeleitet.",
@@ -4873,7 +4897,7 @@ function HkmModelExplorer() {
 
             <g tabIndex={0} role="button" className="cursor-pointer outline-none" onMouseEnter={() => setHoverKey("requirement")} onMouseLeave={() => setHoverKey(null)} onFocus={() => setHoverKey("requirement")} onBlur={() => setHoverKey(null)} onClick={() => setActiveKey("requirement")}>
               <rect x="462" y="30" width="310" height="42" rx="14" fill={currentKey === "requirement" ? "#174a87" : "#ffffff"} stroke="#174a87" strokeOpacity=".25" filter="url(#hkm-soft-shadow)" />
-              <text x="617" y="56" textAnchor="middle" fill={currentKey === "requirement" ? "#ffffff" : "#174a87"} fontSize="18" fontWeight="900">Berufliche Anforderung</text>
+              <text x="617" y="56" textAnchor="middle" fill={currentKey === "requirement" ? "#ffffff" : "#174a87"} fontSize="16" fontWeight="900">Berufliche Anforderungssituation</text>
             </g>
 
             <text x="578" y="118" textAnchor="middle" fill="#1383bd" fontSize="22" fontWeight="900">Handlungsdimensionen</text>
@@ -5188,7 +5212,7 @@ function GoalAssistantPanel({
               <div className="grid gap-2 border-t border-[color:var(--help-border)] p-3 text-xs leading-relaxed text-ink/65">
                 <p>
                   <span className="font-black text-ink">Grundstruktur: </span>
-                  Ein kompetenzorientiertes Ziel verbindet eine berufliche Anforderung oder Handlungssituation, einen fachlichen Inhalt bzw. Gegenstand, ein beobachtbares Verhalten und bei Bedarf Qualitätsanforderungen oder Rahmenbedingungen.
+                  Ein kompetenzorientiertes Ziel verbindet die Lernsituation, einen fachlichen Inhalt bzw. Gegenstand, ein beobachtbares Verhalten und bei Bedarf Qualitätsanforderungen oder Rahmenbedingungen.
                 </p>
                 {[
                   ["Metalltechnik", "Die Schülerinnen und Schüler können für eine vorgegebene Dachfläche den erforderlichen Materialbedarf ermitteln und ihre Auswahl fachlich begründen."],
@@ -5202,11 +5226,11 @@ function GoalAssistantPanel({
               </div>
             </details>
             <button type="button" className="mt-3 rounded-full bg-moss px-4 py-2 text-xs font-bold text-white transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:bg-ink/20" disabled={!suggestion} onClick={onApply}>
-              Vorschlag ins Globalziel übernehmen
+              Vorschlag ins Gesamtziel übernehmen
             </button>
           </div>
           <div className="rounded-2xl border border-ink/10 bg-paper/70 p-4">
-            <div className="label">Freiwillige Qualitätsprüfung</div>
+            <div className="label">Formulierung prüfen</div>
             <div className="mt-2 grid gap-2">
               {checks.map((check) => (
                 <span key={check.label} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold ${check.ok ? "bg-moss/10 text-moss" : "bg-white text-ink/45"}`}>
@@ -5246,7 +5270,9 @@ function QualityReflectionPanel({ plan, totalMinutes }: { plan: Plan; totalMinut
   const checks = [
     { label: "Lernziel plausibel", ok: plan.globalGoal.trim().length > 25 && hasObservableVerb(plan.globalGoal), hint: "Situation, Inhalt und beobachtbares Verhalten prüfen." },
     { label: "Kompetenzniveau passend", ok: hasCompetencyLevel && hasLevelGoal, hint: "Kompetenzfeld, Stufe und konkretes Ziel verbinden." },
-    { label: "Lernaufgaben stimmig", ok: plan.phases.length > 0 && phaseGoals > 0, hint: "Phasenziele mit dem Globalziel abgleichen." },
+    { label: "Lernsituation und Ziel stimmig", ok: Boolean(plan.concreteLearningSituation.trim()) && plan.globalGoal.trim().length > 25, hint: "Lernsituation und Gesamtziel der Stunde aufeinander beziehen." },
+    { label: "Lernergebnisse geklärt", ok: Boolean(plan.requiredLearningOutcomes.trim()), hint: "Erforderliche Lernergebnisse aus Lernsituation und Gesamtziel ableiten." },
+    { label: "Lernaufgaben stimmig", ok: plan.phases.length > 0 && phaseGoals > 0, hint: "Phasenziele mit dem Gesamtziel der Stunde abgleichen." },
     { label: "Methoden unterstützen Ziele", ok: plan.phases.length > 0 && phasesWithMethods > 0 && phasesWithActions > 0, hint: "Lehr-/Lernhandlung, Methode und Medien zusammendenken." },
     { label: "Adressatenanalyse berücksichtigt", ok: prereqConsidered || plan.targetAudience === "in-service", hint: "Lernvoraussetzungen in Konsequenzen übersetzen." },
     { label: "Zeitplanung sichtbar", ok: totalMinutes > 0, hint: "Phasenzeiten prüfen und realistische Übergänge einplanen." },
@@ -5255,8 +5281,8 @@ function QualityReflectionPanel({ plan, totalMinutes }: { plan: Plan; totalMinut
     <details className="group/quality rounded-2xl border border-ink/10 bg-white/80 shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-sky/5 [&::-webkit-details-marker]:hidden">
         <div>
-          <div className="text-sm font-black text-ink">Reflexionscheck</div>
-          <div className="text-xs text-ink/45">Nicht verpflichtend – nur ein kurzer Blick auf mögliche Passungen im Sinne kompetenzorientierter Unterrichtsplanung.</div>
+          <div className="text-sm font-black text-ink">Didaktische Passung prüfen</div>
+          <div className="text-xs text-ink/45">Zentrale Entscheidungen der Grobplanung auf Schlüssigkeit abstimmen.</div>
         </div>
         <ChevronDown size={16} className="text-ink/35 transition group-open/quality:rotate-180" />
       </summary>
@@ -5311,14 +5337,14 @@ function LearningSituationReflection({
     <details className="group/ls overflow-hidden rounded-2xl border border-ink/10 bg-white/85 shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-sky/5 [&::-webkit-details-marker]:hidden">
           <div>
-            <div className="text-sm font-black text-ink">Qualitätscheck Lernsituation</div>
-          <div className="text-xs leading-relaxed text-ink/45">Optionaler Blick auf das Grobkonzept - keine Bewertung, keine Punktzahl.</div>
+            <div className="text-sm font-black text-ink">Lernsituation im Grobplanungscheck</div>
+          <div className="text-xs leading-relaxed text-ink/45">Prüffragen zur Tragfähigkeit der didaktisch entwickelten Lernsituation.</div>
         </div>
         <ChevronDown size={16} className="shrink-0 text-ink/35 transition group-open/ls:rotate-180" />
       </summary>
       <div className="border-t border-ink/10 p-4">
         <p className="mb-4 max-w-3xl text-xs leading-relaxed text-ink/50">
-          Prüfe bei Bedarf, ob die konkrete Lernsituation als Ausgangspunkt des Grobkonzepts tragfähig ist. Der Check bewertet nicht die fertige Unterrichtsplanung; du kannst einzelne Punkte abhaken oder einfach überspringen.
+          Prüfe, ob die Lernsituation nachvollziehbar aus beruflicher Anforderungssituation, Sachanalyse, Adressatenanalyse und didaktischer Reduktion hervorgeht.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           {learningSituationReflectionItems.map((item) => {
@@ -5997,8 +6023,8 @@ function ExamCriteriaModal({
 function CompetencyLandscape({ phases, compact = false }: { phases: Phase[]; compact?: boolean }) {
   const visualAreas: { key: CompetencyArea; title: string; subtitle: string }[] = [
     { key: "fach", title: "I. Sach-/Fachkompetenz", subtitle: "Umgang mit der Sache" },
-    { key: "selbst", title: "II.1 Selbstkompetenz", subtitle: "Umgang mit sich selbst" },
-    { key: "sozial", title: "II.2 Sozialkompetenz", subtitle: "Umgang mit anderen" },
+    { key: "sozial", title: "II.1 Sozialkompetenz", subtitle: "Umgang mit anderen" },
+    { key: "selbst", title: "II.2 Selbstkompetenz", subtitle: "Umgang mit sich selbst" },
   ];
   const frontX = 270;
   const cellWidth = 142;
@@ -6221,6 +6247,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
   const audience = targetAudienceOptions.find((option) => option.key === plan.targetAudience)?.title ?? "Studium";
   const detailedPdf = isVisible(pdfConfig.analysis);
   const showPdfObservation = Boolean(plan.observationEnabled && plan.observationTask.trim());
+  const completedLearningSituationChecks = Object.values(plan.learningSituationChecks).filter((entry) => entry.checked).length;
   const contentBubbleSummary = plan.contentBubbles
     .filter((bubble) => bubble.title.trim() || bubble.description.trim())
     .map((bubble) => [bubble.title.trim(), bubble.description.trim()].filter(Boolean).join(": "))
@@ -6235,6 +6262,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
     plan.curriculumReference,
     plan.annualPlanReference,
     plan.topicPlacement,
+    plan.situationDescription,
     ...(showPdfCompetencyNeed ? [
       plan.competencyIntentions,
       plan.competencyDemand,
@@ -6243,6 +6271,9 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
     ] : []),
     plan.didacticConsiderations,
     plan.methodologicalConsiderations,
+    plan.concreteLearningSituation,
+    plan.globalGoal,
+    plan.requiredLearningOutcomes,
     plan.learningPrerequisites.compact,
     plan.learningPrerequisites.priorKnowledge,
     plan.learningPrerequisites.subject,
@@ -6287,12 +6318,12 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
           <div className="grid gap-[2.5mm] text-[7.4pt] leading-snug">
             {showCoverProfessionalRequirement && (
               <div className="rounded-[3mm] border border-ink/10 px-[3mm] py-[2.2mm]">
-                <div className="text-[6pt] font-bold uppercase tracking-[.13em] text-moss">Berufliche Anforderung</div>
+                <div className="text-[6pt] font-bold uppercase tracking-[.13em] text-moss">Berufliche Anforderungssituation</div>
                 <p className="mt-1 whitespace-pre-wrap text-ink/70">{plan.situationDescription || "—"}</p>
               </div>
             )}
             <div className="rounded-[3mm] border border-moss/15 bg-sky/10 px-[3mm] py-[2.2mm]">
-              <div className="text-[6pt] font-bold uppercase tracking-[.13em] text-moss">Globalziel der Unterrichtseinheit</div>
+              <div className="text-[6pt] font-bold uppercase tracking-[.13em] text-moss">Gesamtziel der Stunde</div>
               <p className="mt-1 whitespace-pre-wrap font-semibold text-ink/85">{plan.globalGoal || "—"}</p>
             </div>
           </div>
@@ -6346,6 +6377,13 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                 </div>
               </div>
             )}
+            {plan.situationDescription.trim() && (
+              <div className="print-analysis-card rounded-[4mm] border border-ink/10 p-[4mm]">
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Berufliche Anforderungssituation</div>
+                <p className="mt-2 whitespace-pre-wrap">{plan.situationDescription}</p>
+                <p className="mt-2 text-[7.5pt] text-ink/50">Reale berufliche Situation als Ausgangspunkt der Kompetenzbedarfsanalyse; noch nicht die didaktisch reduzierte Lernsituation.</p>
+              </div>
+            )}
             {showPdfCompetencyNeed && (plan.competencyNeedAnalysis.summary || plan.competencyIntentions || plan.competencyDemand || plan.wkwFocus) && (
               <div className="print-analysis-card rounded-[4mm] border border-ink/10 p-[4mm]">
                 <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Kompetenzbedarf</div>
@@ -6376,9 +6414,9 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
             )}
             {(plan.didacticConsiderations || plan.methodologicalConsiderations) && (
               <div className="print-analysis-card rounded-[4mm] border border-ink/10 p-[4mm]">
-                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Didaktische und methodische Überlegungen</div>
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Didaktische Reduktion und methodische Überlegungen</div>
                 <div className="print-card-grid mt-2 grid grid-cols-2 gap-[4mm]">
-                  <p><b>Didaktik:</b><br />{plan.didacticConsiderations || "—"}</p>
+                  <p><b>Didaktische Reduktion:</b><br />{plan.didacticConsiderations || "—"}</p>
                   <p><b>Methodik:</b><br />{plan.methodologicalConsiderations || "—"}</p>
                 </div>
               </div>
@@ -6406,6 +6444,17 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
                 </div>
               </div>
             )}
+            {(plan.concreteLearningSituation.trim() || plan.globalGoal.trim() || plan.requiredLearningOutcomes.trim()) && (
+              <div className="print-analysis-card rounded-[4mm] border border-moss/15 bg-sky/5 p-[4mm]">
+                <div className="text-[7pt] font-bold uppercase tracking-[.14em] text-moss">Pädagogisch-didaktische Synthese</div>
+                <div className="print-card-grid mt-2 grid grid-cols-3 gap-[4mm]">
+                  <p><b>Lernsituation der Unterrichtsstunde:</b><br />{plan.concreteLearningSituation || "—"}</p>
+                  <p><b>Gesamtziel der Stunde:</b><br />{plan.globalGoal || "—"}</p>
+                  <p><b>Erforderliche Lernergebnisse:</b><br />{plan.requiredLearningOutcomes || "—"}</p>
+                </div>
+                <p className="mt-3 border-t border-ink/10 pt-2 text-[7.5pt] text-ink/55"><b>Grobplanungscheck:</b> {completedLearningSituationChecks} von {learningSituationReflectionItems.length} Prüfaspekten zur Lernsituation markiert; zentrale didaktische Entscheidungen vor dem Unterrichtsverlauf auf Passung prüfen.</p>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -6423,7 +6472,7 @@ function PrintDocument({ plan, totalMinutes }: { plan: Plan; totalMinutes: numbe
           <div className="mt-[6mm] space-y-[4mm]">
             {showPdfConcreteLearningSituation && plan.concreteLearningSituation.trim() && (
               <div className="print-concrete-situation-card rounded-[5mm] border border-moss/15 bg-sky/10 p-[5mm]">
-                <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Konkrete Lernsituation</div>
+                <div className="text-[7pt] font-bold uppercase tracking-[.15em] text-moss">Lernsituation der Unterrichtsstunde</div>
                 <p className="mt-2 whitespace-pre-wrap text-[9pt] leading-relaxed text-ink/75">{plan.concreteLearningSituation}</p>
               </div>
             )}

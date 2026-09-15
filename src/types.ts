@@ -112,6 +112,7 @@ export interface Plan {
   className: string;
   situationDescription: string;
   concreteLearningSituation: string;
+  requiredLearningOutcomes: string;
   situationImageDataUrl: string;
   situationImageName: string;
   globalGoal: string;
